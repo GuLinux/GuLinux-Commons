@@ -14,7 +14,6 @@ WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& res
 {
   fs::path p(resourcesDir);
   for(fs::directory_iterator it(p); it != fs::directory_iterator(); it++) {
-      wApp->log("notice") << "found path: " << it->path().string() << ", extension=" << it->path().extension();
       if(fs::is_regular_file(it->path()) && it->path().extension().string() == ".html")
         processHtmlTemplate(it->path());
   }
@@ -23,14 +22,10 @@ WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& res
 void WHTMLTemplatesLocalizedStrings::processHtmlTemplate(filesystem::path path)
 {
   string key = path.filename().replace_extension().string();
-  wApp->log("notice") << "processing file: " << path.string();
-  wApp->log("notice") << "key: " << key;
   ifstream file(path.string());
   stringstream s;
   s << file.rdbuf();
   translationMap[key] = s.str();
-  
-  wApp->log("notice") << "key: " << key << " mapped to " << translationMap[key];
 }
 
 
