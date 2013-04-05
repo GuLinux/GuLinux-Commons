@@ -7,6 +7,9 @@
 #define _n4 Wt::NoClass, _n3
 #define _n5 Wt::NoClass, _n4
 #define _n6 Wt::NoClass, _n5
+
+#define wtr Wt::WString::tr
+
 namespace Wt {
   class WLayout;
 }
