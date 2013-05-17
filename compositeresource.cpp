@@ -47,14 +47,12 @@ CompositeResource* CompositeResource::add(string pathInfo, WResource* resource)
 
 void CompositeResource::handleRequest(const Http::Request& request, Http::Response& response)
 {
-  log("notice") << "Got pathInfo: " << request.pathInfo();
   auto subResource = d->resources[request.pathInfo()];
   if(!subResource) {
     response.setStatus(404);
     response.out() << "Not Found.";
     return;
   }
-  log("notice") << "Resource " << request.pathInfo() << " found, handling output";
   subResource->handleRequest(request, response);
 }
 
