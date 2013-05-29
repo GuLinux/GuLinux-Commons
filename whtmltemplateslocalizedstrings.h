@@ -5,7 +5,10 @@
 #include <Wt/WLocalizedStrings>
 #include <Wt/WObject>
 
-
+namespace WtCommons {
+  namespace WtCommonsPrivate {
+    class WHTMLTemplatesLocalizedStringsPrivate;
+  }
 class WHTMLTemplatesLocalizedStrings : public Wt::WLocalizedStrings, public Wt::WObject
 {
 
@@ -14,8 +17,9 @@ public:
   virtual bool resolveKey(const std::string& key, std::string& result);
   virtual ~WHTMLTemplatesLocalizedStrings();
 private:
-    void processHtmlTemplate(boost::filesystem::path path);
-    std::map<std::string,std::string> translationMap;
+  WtCommons::WtCommonsPrivate::WHTMLTemplatesLocalizedStringsPrivate *const d;
 };
 
+
+}
 #endif // WHTMLTEMPLATESLOCALIZEDSTRINGS_H

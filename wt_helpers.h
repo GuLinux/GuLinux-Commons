@@ -23,6 +23,8 @@ namespace Wt {
 #define JS(...) #__VA_ARGS__
 #define HTML(...) #__VA_ARGS__
 
+namespace WtCommons {
+
 typedef std::function<void(Wt::WMouseEvent&)> MouseEventListener;
 
 template<class WidgetType>
@@ -127,6 +129,5 @@ template<class OtherType>
 private:
   WidgetType *widget;
 };
-
-//#define WW(WidgetType, ...) _WW<WidgetType>(new WidgetType(__VA_ARGS__) )
+}
 #endif

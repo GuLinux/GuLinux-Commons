@@ -23,7 +23,8 @@
 namespace Wt {
 class WResource;
 }
-
+namespace WtCommons {
+  class WtCommons::CompositeResource;
 namespace WtCommonsPrivate {
 class CompositeResourcePrivate
 {
@@ -34,8 +35,8 @@ public:
     std::map<std::string, Wt::WResource*> resources;
 
 private:
-    class CompositeResource* const q;
+  WtCommons::CompositeResource* const q;
 };
 }
-
+}
 #endif // COMPOSITERESOURCEPRIVATE_H

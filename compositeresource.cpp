@@ -24,6 +24,7 @@
 
 using namespace Wt;
 using namespace std;
+using namespace WtCommons;
 using namespace WtCommonsPrivate;
 
 CompositeResourcePrivate::CompositeResourcePrivate(CompositeResource* q) : q(q)

@@ -20,6 +20,7 @@
 
 #include <Wt/WResource>
 
+namespace WtCommons {
 namespace WtCommonsPrivate {
   class CompositeResourcePrivate;
 }
@@ -32,7 +33,8 @@ public:
     CompositeResource(Wt::WObject* parent = 0);
     CompositeResource *add(std::string pathInfo, Wt::WResource *resource);
 private:
-  WtCommonsPrivate::CompositeResourcePrivate* const d;
+  WtCommons::WtCommonsPrivate::CompositeResourcePrivate* const d;
 };
+}
 
 #endif // COMPOSITERESOURCE_H
