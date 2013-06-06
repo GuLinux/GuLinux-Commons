@@ -24,7 +24,6 @@ namespace Wt {
 class WResource;
 }
 namespace WtCommons {
-  class WtCommons::CompositeResource;
 namespace WtCommonsPrivate {
 class CompositeResourcePrivate
 {
