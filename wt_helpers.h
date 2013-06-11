@@ -38,6 +38,9 @@ namespace Wt {
 #include <Wt/WEvent>
 #include <functional>
 #include <Wt/WServer>
+#include <Wt/WConfig.h>
+#include <Wt/WPanel>
+#include <Wt/WContainerWidget>
 
 #define wLog (wApp ? wApp->log("notice") : Wt::WServer::instance()->log("notice"))
 #define JS(...) #__VA_ARGS__
@@ -45,6 +48,12 @@ namespace Wt {
 
 namespace WtCommons {
 
+inline void setHeaderCollapsible(Wt::WPanel *panel) {
+  if(std::string{"3.3.0"} != WT_VERSION_STR) return;
+  panel->titleBarWidget()->clicked().connect([=](Wt::WMouseEvent) { panel->setCollapsed(!panel->isCollapsed()); });
+}
+
+  
 template<class WidgetType>
 class WW {
 public:
