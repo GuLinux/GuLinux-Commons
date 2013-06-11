@@ -45,8 +45,6 @@ namespace Wt {
 
 namespace WtCommons {
 
-typedef std::function<void(Wt::WMouseEvent&)> MouseEventListener;
-
 template<class WidgetType>
 class WW {
 public:
@@ -84,7 +82,9 @@ template<class OtherType>
     return *this;
   }
   
-  WW &onClick(MouseEventListener listener) {
+  
+  template<typename C>
+  WW &onClick(C listener) {
     widget->clicked().connect(listener);
     return *this;
   }
