@@ -109,7 +109,7 @@ template<class OtherType>
     widget->setInline(isInline);
     return *this;
   }
-  WW &resize(Wt::WLength &w, Wt::WLength &h) {
+  WW &resize(const Wt::WLength &w, const Wt::WLength &h) {
     widget->resize(w,h);
     return *this;
   }
