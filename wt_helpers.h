@@ -113,6 +113,10 @@ template<class OtherType>
     widget->setIcon(link);
     return *this;
   }
+  WW &setImage(Wt::WImage *image) {
+    widget->setImage(image);
+    return *this;
+  }
   WW &resize(const Wt::WLength &w, const Wt::WLength &h) {
     widget->resize(w,h);
     return *this;
