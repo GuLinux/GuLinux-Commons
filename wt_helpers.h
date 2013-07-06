@@ -109,6 +109,10 @@ template<class OtherType>
     widget->setInline(isInline);
     return *this;
   }
+  WW &setIcon(const Wt::WLink &link) {
+    widget->setIcon(link);
+    return *this;
+  }
   WW &resize(const Wt::WLength &w, const Wt::WLength &h) {
     widget->resize(w,h);
     return *this;
