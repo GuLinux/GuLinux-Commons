@@ -23,7 +23,6 @@
 #include <Wt/WServer>
 #include <thread>
 #include <boost/thread.hpp>
-#include <../../opt/wt/include/Wt/WIOService>
 
 using namespace std;
 using namespace Wt;
