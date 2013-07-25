@@ -33,6 +33,9 @@ public:
   std::string password;
   ShutdownCondition condition;
   WtCommons::QuitResource* const q;
+  int restart_argc{-1};
+  char** restart_argv;
+  char** restart_envp;
 };
 }
 }

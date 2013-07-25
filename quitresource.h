@@ -35,7 +35,7 @@ public:
     ~QuitResource();
     virtual void handleRequest(const Wt::Http::Request& request, Wt::Http::Response& response);
     QuitResource(std::string password = std::string{}, ShutdownCondition condition = []{ return true; }, Wt::WObject* parent = 0);
-
+    QuitResource *setRestart(int argc,char **argv, char **envp);
 private:
     WtCommonsPrivate::QuitResourcePrivate* const d;
 };

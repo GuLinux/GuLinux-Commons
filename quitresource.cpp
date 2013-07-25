@@ -66,14 +66,24 @@ void QuitResource::handleRequest(const Wt::Http::Request& request, Wt::Http::Res
     WServer::instance()->stop();
     while(WServer::instance()->isRunning())
       this_thread::sleep_for(chrono::milliseconds(500));
+    if(d->restart_argc > -1)
+      WServer::restart(d->restart_argc, d->restart_argv, d->restart_envp);
     exit(0);
   });
   response.setStatus(200);
   response.out() << "Server stop scheduled";
 }
 
+QuitResource* QuitResource::setRestart(int argc, char** argv, char** envp)
+{
+  d->restart_argc = argc;
+  d->restart_argv = argv;
+  d->restart_envp = envp;
+  return this;
+}
+
+
 QuitResource::QuitResource(std::string password, ShutdownCondition condition, WObject* parent)
     : d(new QuitResourcePrivate(password, condition, this))
 {
-
 }
