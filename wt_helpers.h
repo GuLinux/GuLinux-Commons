@@ -71,6 +71,11 @@ public:
     return *this;
   }
   
+  WW &setId(std::string widgetId) {
+    widget->setId(widgetId);
+    return *this;
+  }
+  
   WidgetType *get() {
     return widget;
   }
