@@ -52,7 +52,7 @@ namespace WtCommons
         ~DbMigrationManager();
 
       private:
-        const std::unique_ptr<::WtCommonsPrivate::DbMigrationManagerPrivate> d;
+        const std::unique_ptr< ::WtCommonsPrivate::DbMigrationManagerPrivate > d;
     };
 }
 #endif // DBMIGRATIONMANAGER_H
