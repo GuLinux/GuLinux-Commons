@@ -37,6 +37,8 @@ DbMigrationManagerPrivate::~DbMigrationManagerPrivate()
 
 void DbMigrationManagerPrivate::apply()
 {
+  std::cerr << "Applying migrations" << std::endl;
+
   try
   {
     session.createTables();
@@ -46,6 +48,7 @@ void DbMigrationManagerPrivate::apply()
   catch
     ( ... )
   {
+    std::cerr << "Tables already found" << std::endl;
   }
 
   dbo::Transaction t( session );
