@@ -28,7 +28,7 @@ using namespace std;
 namespace dbo = Wt::Dbo;
 
 DbMigrationManagerPrivate::DbMigrationManagerPrivate( DbMigrationManager *q, dbo::Session &session, dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename )
-  : q( q ), session( session ), connection(connection), migrations( migrations ), tablename( tablename )
+  : q( q ), session( session ), connection( connection ), migrations( migrations ), tablename( tablename )
 {
 }
 DbMigrationManagerPrivate::~DbMigrationManagerPrivate()
@@ -58,12 +58,17 @@ void DbMigrationManagerPrivate::apply()
   catch
     ( ... ) {}
 
-  for( int migrationId = currentMigration ? currentMigration->migrationId : -1; migrationId < migrations.size()-1; migrationId++ )
+  if( currentMigration )
+    cerr << "Last migration found: " << currentMigration.id() << ", " << currentMigration->when().toString() << endl;
+  else
+    cerr << "No new migrations found" << endl;
+
+  for( int migrationId = currentMigration ? currentMigration->migrationId : -1; migrationId < migrations.size() - 1; migrationId++ )
   {
     for( auto migration : migrations[migrationId] )
     {
       cerr << "Applying migration id: " << migrationId << endl;
-      migration( t , connection);
+      migration( t , connection );
     }
 
     session.add( new DboMigration {migrationId} );
