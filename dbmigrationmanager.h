@@ -51,7 +51,7 @@ namespace WtCommons
       public:
         DbMigrationManager( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename = "wt_migrations" );
         ~DbMigrationManager();
-
+        void migrate();
       private:
         const std::unique_ptr< ::WtCommonsPrivate::DbMigrationManagerPrivate > d;
     };

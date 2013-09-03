@@ -86,5 +86,10 @@ DbMigrationManager::DbMigrationManager( dbo::Session &session, dbo::SqlConnectio
 
 DbMigrationManager::~DbMigrationManager()
 {
+}
+
+void DbMigrationManager::migrate()
+{
   d->apply();
 }
+
