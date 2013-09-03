@@ -48,7 +48,7 @@ namespace WtCommons
     class DbMigrationManager
     {
       public:
-        DbMigrationManager( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename = "wt_migrations" );
+        DbMigrationManager( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename = std::string{"wt_migrations"} );
         ~DbMigrationManager();
 
       private:
