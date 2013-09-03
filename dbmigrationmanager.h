@@ -22,6 +22,7 @@
 #include <map>
 #include <functional>
 #include <vector>
+#include <string>
 #include <list>
 #include <memory>
 #define QUERY(...) #__VA_ARGS__
@@ -48,7 +49,7 @@ namespace WtCommons
     class DbMigrationManager
     {
       public:
-        DbMigrationManager( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename = std::string{"wt_migrations"} );
+        DbMigrationManager( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename = "wt_migrations" );
         ~DbMigrationManager();
 
       private:
