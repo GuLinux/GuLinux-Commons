@@ -44,6 +44,7 @@ void DbMigrationManagerPrivate::apply()
     session.createTables();
     dbo::Transaction t( session );
     session.add( new DboMigration {migrations.size()} );
+    t.commit();
   }
   catch
     ( ... )
@@ -76,6 +77,7 @@ void DbMigrationManagerPrivate::apply()
 
     session.add( new DboMigration {migrationId} );
   }
+  t.commit();
 }
 
 DbMigrationManager::DbMigrationManager( dbo::Session &session, dbo::SqlConnection *connection, const MigrationsList &migrations, const std::string &tablename )
