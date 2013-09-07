@@ -21,6 +21,7 @@
 #include "dbmigrationmanager_p.h"
 #include <Wt/Dbo/Session>
 #include <Wt/Dbo/Transaction>
+#include <boost/thread.hpp>
 using namespace WtCommons;
 using namespace WtCommonsPrivate;
 using namespace std;
@@ -43,6 +44,7 @@ void DbMigrationManagerPrivate::apply()
   {
     session.createTables();
     dbo::Transaction t( session );
+
     session.add( new DboMigration {migrations.size()} );
     t.commit();
   }
@@ -52,30 +54,30 @@ void DbMigrationManagerPrivate::apply()
     std::cerr << "Tables already found" << std::endl;
   }
 
-  dbo::Transaction t( session );
-  dbo::ptr<DboMigration> currentMigration;
-
-  try
+  int migrationId = -1;
   {
-    currentMigration = session.find<DboMigration>().orderBy( "migration_id DESC" ).limit( 1 ).resultValue();
-  }
-  catch
-    ( ... ) {}
+    dbo::Transaction t( session );
+    dbo::ptr<DboMigration> currentMigration;
 
-  if( currentMigration )
-    cerr << "Last migration found: " << currentMigration.id() << ", " << currentMigration->when().toString() << endl;
-  else
-    cerr << "No new migrations found" << endl;
-
-  for( int migrationId = currentMigration ? currentMigration->migrationId : -1; migrationId < migrations.size() - 1; migrationId++ )
-  {
-    for( auto migration : migrations[migrationId] )
+    try
     {
-      cerr << "Applying migration id: " << migrationId << endl;
-      migration( t , connection );
+      currentMigration = session.find<DboMigration>().orderBy( "migration_id DESC" ).limit( 1 ).resultValue();
+    }
+    catch
+      ( ... ) {}
+    if(currentMigration)
+      migrationId = currentMigration->migrationId;
+  }
+  for(int nextMigrationId = migrationId +1; nextMigrationId < migrations.size(); nextMigrationId++ )
+  {
+    dbo::Transaction t(session);
+    cerr  << ": Applying migration id: " << nextMigrationId << endl;
+    for( auto migration : migrations[nextMigrationId] )
+    {
+      migration( t , connection);
     }
 
-    session.add( new DboMigration {migrationId} );
+    session.add( new DboMigration {nextMigrationId} );
   }
   t.commit();
 }
