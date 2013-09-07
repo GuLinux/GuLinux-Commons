@@ -37,7 +37,9 @@
 #ifndef IN_KDEVELOP_PARSER
 #define CREATE_MIGRATION(migrationName, creationTime, applyFunction) WtCommons::DboMigration * migrationName () { \
     auto executeMigration = [](Wt::Dbo::Transaction & t, WtCommons::DboMigration &m) applyFunction  ; \
-    return new WtCommons::DboMigration( executeMigration, __func__, creationTime); \
+    std::string prettyFunction = __PRETTY_FUNCTION__;\
+    boost::replace_all(prettyFunction, "WtCommons::DboMigration* ", "");\
+    return new WtCommons::DboMigration( executeMigration, prettyFunction, creationTime); \
   }
 #else
 #define CREATE_MIGRATION(a, b)
