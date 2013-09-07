@@ -20,47 +20,22 @@
 #ifndef DBMIGRATIONMANAGERPRIVATE_H
 #define DBMIGRATIONMANAGERPRIVATE_H
 
-#include "dbmigrationmanager.h"
+#include "migratedbo.h"
 #include <stdint.h>
-#include <Wt/WDateTime>
-#include <Wt/Dbo/Dbo>
-#include <Wt/Dbo/Types>
-#include <Wt/Dbo/ptr>
 namespace WtCommonsPrivate
 {
-  class DboMigration
+  class MigrateDboPrivate
   {
     public:
-      DboMigration() = default;
-      DboMigration( int64_t migrationId, const Wt::WDateTime &when = Wt::WDateTime::currentDateTime() )
-        : migrationId( migrationId ), _when( when.toPosixTime() ) {}
-      int64_t migrationId;
-      boost::posix_time::ptime _when;
-      Wt::WDateTime when() const
-      {
-        return Wt::WDateTime::fromPosixTime( _when );
-      }
-      template<class Action>
-      void persist( Action &a )
-      {
-        Wt::Dbo::id( a, migrationId, "migration_id" );
-        Wt::Dbo::field( a, _when, "when" );
-      }
-  };
-
-
-  class DbMigrationManagerPrivate
-  {
-    public:
-      DbMigrationManagerPrivate( WtCommons::DbMigrationManager *q, Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const WtCommons::MigrationsList &migrations, const std::string &tablename );
-      virtual ~DbMigrationManagerPrivate();
+      MigrateDboPrivate( WtCommons::MigrateDbo *q, Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const WtCommons::Migrations &migrations, const std::string &tablename );
+      virtual ~MigrateDboPrivate();
       Wt::Dbo::Session &session;
       Wt::Dbo::SqlConnection *connection;
-      WtCommons::MigrationsList migrations;
+      WtCommons::Migrations migrations;
       const std::string tablename;
       void apply();
     private:
-      WtCommons::DbMigrationManager *const q;
+      WtCommons::MigrateDbo *const q;
   };
 }
 namespace Wt
@@ -68,7 +43,7 @@ namespace Wt
   namespace Dbo
   {
     template<>
-    struct dbo_traits<WtCommonsPrivate::DboMigration> : public dbo_default_traits
+    struct dbo_traits<WtCommons::DboMigration> : public dbo_default_traits
     {
       static const char *surrogateIdField()
       {
