@@ -212,7 +212,6 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
         getTableInfoStatement->getResult( 3, &isNotNull );
         getTableInfoStatement->getResult( 4, &defaultValue, 1024 );
         getTableInfoStatement->getResult( 5, &isPrimaryKey );
-        cerr << "column name: " << colName << ", type: " << colType << ", isNotNull: " << isNotNull << ", defaultValue: " << defaultValue.empty() << ", isPK: " << isPrimaryKey << endl;
         table.columns.push_back( CreateTable::Column { colName, colType + ( isNotNull ? " not null" : "" ) , defaultValue.empty() ? defaultValue : " default " + defaultValue } );
         columnsToCopy.push_back( "\"" + colName + "\"" );
 
@@ -232,13 +231,14 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
 }
 
 
+
 void DboMigration::renameColumn( const string &tableName, const string &columnName, const string &newColumnName )
 {
   static string renameColumnPgSqlStatement = "ALTER TABLE \"%s\" RENAME COLUMN \"%s\" TO \"%s\"";
 
   if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
   {
-    cerr << "Warning: Sqlite3 doesn't support MODIFY COLUMN statement; using workaround.";
+    cerr << "Warning: Sqlite3 doesn't support RENAME COLUMN statement; using workaround." << endl;
     static string getTableCreationSql = "SELECT sql FROM sqlite_master WHERE type='table' AND name = \"%s\";";
     static string getTableInfoSql = "pragma table_info(\"%s\");";
     vector<string> tableColumns;
@@ -266,3 +266,4 @@ void DboMigration::renameColumn( const string &tableName, const string &columnNa
   cerr << typeid( *_connection ).name() << endl;
   execute( renameColumnPgSqlStatement, {tableName, columnName, newColumnName} );
 }
+

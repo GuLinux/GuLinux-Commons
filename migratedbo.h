@@ -68,29 +68,45 @@ namespace WtCommons
   class DboMigration
   {
     public:
+      template<typename T>
+      struct DefaultValue
+      {
+        T defaultValue;
+        DefaultValue<T>() = default;
+        DefaultValue<T>( const T &defaultValue ) : defaultValue( defaultValue ) {}
+        bool shouldUseDefaultValue = true;
+        std::string sql() const
+        {
+          if( !shouldUseDefaultValue )
+            return "";
+
+          return "default " + boost::lexical_cast<std::string>( defaultValue );
+        }
+        static DefaultValue no()
+        {
+          DefaultValue<T> d;
+          d.shouldUseDefaultValue = false;
+          return d;
+        }
+      };
       struct CreateTable
       {
-        struct Column {
-          std::string name;
-          std::string type;
-          std::string defaultValue;
-        };
+          struct Column
+          {
+            std::string name;
+            std::string type;
+            std::string defaultValue;
+          };
           CreateTable( const CreateTable &other );
-          CreateTable(DboMigration *dboMigration, const std::string &tableName );
-          DboMigration * const dboMigration ;
+          CreateTable( DboMigration *dboMigration, const std::string &tableName );
+          DboMigration *const dboMigration ;
           std::string tableName;
           std::vector<Column> columns;
           std::vector<std::string> primaryKeys;
           template<typename T>
-          CreateTable &column( std::string name )
+          CreateTable &column( std::string name, DefaultValue<T> defaultValue = DefaultValue<T>::no() )
           {
-            columns.push_back( {name, dboMigration->sqlType<T>()} );
-            return *this;
-          }
-          template<typename T>
-          CreateTable &column( std::string name, T defaultValue )
-          {
-            columns.push_back( {name, dboMigration->sqlType<T>(), "default " + boost::lexical_cast<std::string>(defaultValue)} );
+            columns.push_back( {name, dboMigration->sqlType<T>(), defaultValue.sql()} );
             return *this;
           }
           CreateTable &primaryKey( const std::string &primaryKeyName );
@@ -123,24 +139,26 @@ namespace WtCommons
       CreateTable createTable( const std::string &tableName );
 
       template<typename ColumnType>
-      void addColumn( const std::string &tableName, const std::string &columnName, const ColumnType &defaultValue )
+      void addColumn( const std::string &tableName, const std::string &columnName, DefaultValue<ColumnType> defaultValue = DefaultValue<ColumnType>::no() )
       {
-        static std::string addColumnStatement = "ALTER TABLE \"%s\" ADD COLUMN \"%s\" %s default %s";
-        execute( addColumnStatement, {tableName, columnName, sqlType<ColumnType>(), defaultValue} );
+        static std::string addColumnStatement = "ALTER TABLE \"%s\" ADD COLUMN \"%s\" %s %s";
+        execute( addColumnStatement, {tableName, columnName, sqlType<ColumnType>(), defaultValue.sql()} );
       }
       template<typename ColumnType>
-      void addColumn( const std::string &tableName, const std::string &columnName )
-      {
-        static std::string addColumnStatement = "ALTER TABLE \"%s\" ADD COLUMN \"%s\" %s";
-        execute( addColumnStatement, {tableName, columnName, sqlType<ColumnType>()} );
-      }
-      template<typename ColumnType>
-      void modifyColumn( const std::string &tableName, const std::string &columnName )
+      void modifyColumn( const std::string &tableName, const std::string &columnName, DefaultValue<ColumnType> defaultValue = DefaultValue<ColumnType>::no() )
       {
         static std::string modifyColumnStatementPgSql = "ALTER TABLE \"%s\" ALTER COLUMN \"%s\" %s";
 
         if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
         {
+          std::cerr << "Warning: Sqlite3 doesn't support MODIFY COLUMN statement; using workaround" << std::endl;
+          std::string tempColName = columnName + "__temp";
+          renameColumn( tableName, columnName, tempColName );
+          addColumn<ColumnType>( tableName, columnName,  defaultValue );
+          static std::string copyDataSql = "UPDATE \"%s\" set \"%s\" = \"%s\";";
+          execute( copyDataSql, {tableName, columnName, tempColName} );
+          removeColumn( tableName, tempColName );
+          return;
         }
 
         execute( modifyColumnStatementPgSql, {tableName, columnName, sqlType<ColumnType>()} );
@@ -151,6 +169,7 @@ namespace WtCommons
       void removeColumn( const std::string &tableName, const std::string &columnName );
       void dropTable( const std::string &tableName );
     private:
+      void sqlite3ModifyColumn( const std::string &tableName, const std::string &columnName, const std::string &newColumnType );
       int64_t _migrationId;
       boost::posix_time::ptime _whenApplied;
       boost::posix_time::ptime _whenCreated;
