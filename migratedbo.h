@@ -44,9 +44,9 @@
 #else
 #define CREATE_MIGRATION(a, b)
 #endif
-
-#include <Wt/Dbo/backend/Sqlite3>
-
+#ifdef HAVE_SQLITE3
+  #include <Wt/Dbo/backend/Sqlite3>
+#endif
 namespace WtCommonsPrivate
 {
   class MigrateDboPrivate;
@@ -68,6 +68,7 @@ namespace WtCommons
   class DboMigration
   {
     public:
+      enum DboType { Sqlite3 = 0x1, PostgreSQL = 0x2, MySQL=0x4, ALL=0x7 };
       template<typename T>
       struct DefaultValue
       {
@@ -134,7 +135,7 @@ namespace WtCommons
       {
         return Wt::Dbo::sql_value_traits<T>().type( _connection, -1 );
       }
-      void execute( const std::string &statement, const std::vector<std::string> &args );
+      void execute( const std::string &statement, const std::vector<std::string> &args, DboType dboType = ALL );
       void apply( Wt::Dbo::Transaction &transaction, Wt::Dbo::SqlConnection *connection, int64_t migrationId );
       CreateTable createTable( const std::string &tableName );
 
@@ -148,7 +149,7 @@ namespace WtCommons
       void modifyColumn( const std::string &tableName, const std::string &columnName, DefaultValue<ColumnType> defaultValue = DefaultValue<ColumnType>::no() )
       {
         static std::string modifyColumnStatementPgSql = "ALTER TABLE \"%s\" ALTER COLUMN \"%s\" %s";
-
+#ifdef HAVE_SQLITE3
         if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
         {
           std::cerr << "Warning: Sqlite3 doesn't support MODIFY COLUMN statement; using workaround" << std::endl;
@@ -160,6 +161,7 @@ namespace WtCommons
           removeColumn( tableName, tempColName );
           return;
         }
+#endif
 
         execute( modifyColumnStatementPgSql, {tableName, columnName, sqlType<ColumnType>()} );
       }
@@ -169,7 +171,6 @@ namespace WtCommons
       void removeColumn( const std::string &tableName, const std::string &columnName );
       void dropTable( const std::string &tableName );
     private:
-      void sqlite3ModifyColumn( const std::string &tableName, const std::string &columnName, const std::string &newColumnType );
       int64_t _migrationId;
       boost::posix_time::ptime _whenApplied;
       boost::posix_time::ptime _whenCreated;

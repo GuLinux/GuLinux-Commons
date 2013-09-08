@@ -23,7 +23,13 @@
 #include <Wt/Dbo/Transaction>
 #include <boost/thread.hpp>
 #include <boost/format.hpp>
-
+#ifdef HAVE_MYSQL
+#include <Wt/Dbo/backend/MySQL>
+#endif
+#ifdef HAVE_POSTGRES
+#include <Wt/Dbo/backend/Postgres>
+#endif
+#include <typeindex>
 using namespace WtCommons;
 using namespace WtCommonsPrivate;
 using namespace std;
@@ -53,6 +59,7 @@ void MigrateDboPrivate::apply()
   {
     session.createTables();
     dbo::Transaction t( session );
+    session.add(migrations.front().get());
     t.commit();
   }
   catch
@@ -95,13 +102,28 @@ void DboMigration::apply( Dbo::Transaction &transaction, Dbo::SqlConnection *con
   transaction.session().add( this );
 }
 
-void DboMigration::execute( const string &statement, const vector< string > &args )
+void DboMigration::execute( const string &statement, const vector< string > &args, DboMigration::DboType dboType )
 {
   if( ! _transaction )
   {
     throw runtime_error( "Transaction not initialized; exiting" );
   }
+  
+  static map<type_index, DboType> dboTypes {
+#ifdef HAVE_SQLITE3
+    { typeid(Wt::Dbo::backend::Sqlite3), Sqlite3 },
+#endif
+#ifdef HAVE_POSTGRES
+    { typeid(Wt::Dbo::backend::Postgres), PostgreSQL },
+#endif
+#ifdef HAVE_MYSQL
+    { typeid(Wt::Dbo::backend::MySQL), MySQL },
+#endif
+  };
 
+  if(! (dboType & dboTypes[typeid(*_connection)]))
+    return;
+  
   boost::format query( statement );
 
   for( auto arg : args )
@@ -186,7 +208,7 @@ void DboMigration::dropTable( const string &tableName )
 void DboMigration::removeColumn( const string &tableName, const string &columnName )
 {
   static string removeColumnStatement = "ALTER TABLE \"%s\" DROP COLUMN \"%s\"";
-
+#ifdef HAVE_SQLITE3
   if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
   {
     cerr << "Warning: Sqlite3 doesn't support DROP COLUMN statement; using workaround" << endl;
@@ -226,6 +248,7 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
     dropTable( tempTable );
     return;
   }
+#endif
 
   execute( removeColumnStatement, {tableName, columnName} );
 }
@@ -235,7 +258,7 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
 void DboMigration::renameColumn( const string &tableName, const string &columnName, const string &newColumnName )
 {
   static string renameColumnPgSqlStatement = "ALTER TABLE \"%s\" RENAME COLUMN \"%s\" TO \"%s\"";
-
+#ifdef HAVE_SQLITE3
   if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
   {
     cerr << "Warning: Sqlite3 doesn't support RENAME COLUMN statement; using workaround." << endl;
@@ -262,6 +285,7 @@ void DboMigration::renameColumn( const string &tableName, const string &columnNa
     dropTable( tempTable );
     return;
   }
+#endif
 
   cerr << typeid( *_connection ).name() << endl;
   execute( renameColumnPgSqlStatement, {tableName, columnName, newColumnName} );
