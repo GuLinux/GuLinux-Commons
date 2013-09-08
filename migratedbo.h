@@ -118,6 +118,7 @@ namespace WtCommons
       };
       DboMigration() = default;
       DboMigration( Migration migration, const std::string &migrationName, const std::string &whenCreated );
+      ~DboMigration();
       template<class Action>
       void persist( Action &a )
       {

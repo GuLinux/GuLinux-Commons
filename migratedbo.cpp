@@ -97,7 +97,7 @@ void MigrateDboPrivate::apply()
   {
     session.createTables();
     dbo::Transaction t( session );
-    session.add( migrations.front().get() );
+    session.add( new DboMigration(*migrations.front().get()) );
     t.commit();
   }
   catch
@@ -137,8 +137,13 @@ void DboMigration::apply( Dbo::Transaction &transaction, Dbo::SqlConnection *con
   _whenApplied = WDateTime::currentDateTime().toPosixTime() ;
   cerr << "Applying migration " << migrationId << ": " << _migrationName << endl;
   _migration( transaction, *this );
-  transaction.session().add( this );
+  transaction.session().add( new DboMigration(*this) );
 }
+
+DboMigration::~DboMigration()
+{
+}
+
 
 void DboMigration::execute( const string &statement, const vector< string > &args, DboMigration::DboType dboType )
 {
