@@ -145,6 +145,7 @@ namespace WtCommons
         static std::string addColumnStatement = "ALTER TABLE \"%s\" ADD COLUMN \"%s\" %s %s";
         execute( addColumnStatement, {tableName, columnName, sqlType<ColumnType>(), defaultValue.sql()} );
       }
+      
       template<typename ColumnType>
       void modifyColumn( const std::string &tableName, const std::string &columnName, DefaultValue<ColumnType> defaultValue = DefaultValue<ColumnType>::no() )
       {

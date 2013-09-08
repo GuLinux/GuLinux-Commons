@@ -37,7 +37,7 @@ using namespace Wt;
 namespace dbo = Wt::Dbo;
 
 DboMigration::DboMigration( Migration migration, const string &migrationName, const string &whenCreated )
-  : _migration( migration ), _migrationName( migrationName ), _whenCreated(WDateTime::fromString(whenCreated, "yyyy-MM-dd HH:mm:ss").toPosixTime())
+  : _migration( migration ), _migrationName( migrationName ), _whenCreated( WDateTime::fromString( whenCreated, "yyyy-MM-dd HH:mm:ss" ).toPosixTime() )
 {
   cerr << "Created migration: " << migrationName << endl;
 }
@@ -51,6 +51,44 @@ MigrateDboPrivate::~MigrateDboPrivate()
 {
 }
 
+namespace WtCommonsPrivate
+{
+  struct TemporarlyDisableForeignKeysSupport
+  {
+    TemporarlyDisableForeignKeysSupport( Dbo::SqlConnection *connection );
+    ~TemporarlyDisableForeignKeysSupport();
+    Dbo::SqlConnection *connection;
+    int wasEnabledInFirstPlace;
+  };
+}
+
+TemporarlyDisableForeignKeysSupport::TemporarlyDisableForeignKeysSupport( Dbo::SqlConnection *connection ) : connection(connection)
+{
+  unique_ptr<Dbo::SqlStatement> getForeignKeysEnabledStatement { connection->prepareStatement( "PRAGMA foreign_keys" ) };
+  getForeignKeysEnabledStatement->execute();
+
+  if( getForeignKeysEnabledStatement->nextRow() )
+    getForeignKeysEnabledStatement->getResult( 0, &wasEnabledInFirstPlace );
+
+  if( wasEnabledInFirstPlace )
+  {
+    cerr << "Disabling Foreign Keys Support" << endl;
+    unique_ptr<Dbo::SqlStatement> disableForeignKeysStatement { connection->prepareStatement( "PRAGMA foreign_keys = OFF" ) };
+    disableForeignKeysStatement->execute();
+  }
+}
+
+TemporarlyDisableForeignKeysSupport::~TemporarlyDisableForeignKeysSupport()
+{
+  if( wasEnabledInFirstPlace )
+  {
+    cerr << "Enabling back Foreign Keys Support" << endl;
+    unique_ptr<Dbo::SqlStatement> enableForeignKeysStatement { connection->prepareStatement( "PRAGMA foreign_keys = ON" ) };
+    enableForeignKeysStatement->execute();
+  }
+}
+
+
 void MigrateDboPrivate::apply()
 {
   cerr << "Applying migrations" << endl;
@@ -59,7 +97,7 @@ void MigrateDboPrivate::apply()
   {
     session.createTables();
     dbo::Transaction t( session );
-    session.add(migrations.front().get());
+    session.add( migrations.front().get() );
     t.commit();
   }
   catch
@@ -108,22 +146,23 @@ void DboMigration::execute( const string &statement, const vector< string > &arg
   {
     throw runtime_error( "Transaction not initialized; exiting" );
   }
-  
-  static map<type_index, DboType> dboTypes {
+
+  static map<type_index, DboType> dboTypes
+  {
 #ifdef HAVE_SQLITE3
-    { typeid(Wt::Dbo::backend::Sqlite3), Sqlite3 },
+    { typeid( Wt::Dbo::backend::Sqlite3 ), Sqlite3 },
 #endif
 #ifdef HAVE_POSTGRES
-    { typeid(Wt::Dbo::backend::Postgres), PostgreSQL },
+    { typeid( Wt::Dbo::backend::Postgres ), PostgreSQL },
 #endif
 #ifdef HAVE_MYSQL
-    { typeid(Wt::Dbo::backend::MySQL), MySQL },
+    { typeid( Wt::Dbo::backend::MySQL ), MySQL },
 #endif
   };
 
-  if(! (dboType & dboTypes[typeid(*_connection)]))
+  if( !( dboType & dboTypes[typeid( *_connection )] ) )
     return;
-  
+
   boost::format query( statement );
 
   for( auto arg : args )
@@ -209,12 +248,14 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
 {
   static string removeColumnStatement = "ALTER TABLE \"%s\" DROP COLUMN \"%s\"";
 #ifdef HAVE_SQLITE3
+
   if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
   {
     cerr << "Warning: Sqlite3 doesn't support DROP COLUMN statement; using workaround" << endl;
     static string getTableInfoSql = "pragma table_info(\"%s\");";
+    TemporarlyDisableForeignKeysSupport disableForeignKeys( _connection );
 
-    Wt::Dbo::SqlStatement *getTableInfoStatement = _connection->prepareStatement( ( boost::format( getTableInfoSql ) % tableName ).str() );
+    unique_ptr<Wt::Dbo::SqlStatement> getTableInfoStatement {_connection->prepareStatement( ( boost::format( getTableInfoSql ) % tableName ).str() ) };
     getTableInfoStatement->execute();
     vector<string> columnsToCopy;
     string tempTable = tableName + "_temp";
@@ -248,6 +289,7 @@ void DboMigration::removeColumn( const string &tableName, const string &columnNa
     dropTable( tempTable );
     return;
   }
+
 #endif
 
   execute( removeColumnStatement, {tableName, columnName} );
@@ -259,13 +301,16 @@ void DboMigration::renameColumn( const string &tableName, const string &columnNa
 {
   static string renameColumnPgSqlStatement = "ALTER TABLE \"%s\" RENAME COLUMN \"%s\" TO \"%s\"";
 #ifdef HAVE_SQLITE3
+
   if( typeid( *_connection ) == typeid( Wt::Dbo::backend::Sqlite3 ) )
   {
     cerr << "Warning: Sqlite3 doesn't support RENAME COLUMN statement; using workaround." << endl;
+    TemporarlyDisableForeignKeysSupport disableForeignKeys( _connection );
+
     static string getTableCreationSql = "SELECT sql FROM sqlite_master WHERE type='table' AND name = \"%s\";";
     static string getTableInfoSql = "pragma table_info(\"%s\");";
     vector<string> tableColumns;
-    Wt::Dbo::SqlStatement *getTableInfoStatement = _connection->prepareStatement( ( boost::format( getTableInfoSql ) % tableName ).str() );
+    unique_ptr<Wt::Dbo::SqlStatement> getTableInfoStatement { _connection->prepareStatement( ( boost::format( getTableInfoSql ) % tableName ).str() ) };
     getTableInfoStatement->execute();
 
     while( getTableInfoStatement->nextRow() )
@@ -285,6 +330,7 @@ void DboMigration::renameColumn( const string &tableName, const string &columnNa
     dropTable( tempTable );
     return;
   }
+
 #endif
 
   cerr << typeid( *_connection ).name() << endl;
