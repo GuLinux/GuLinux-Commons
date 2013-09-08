@@ -333,7 +333,6 @@ void DboMigration::renameColumn( const string &tableName, const string &columnNa
 
 #endif
 
-  cerr << typeid( *_connection ).name() << endl;
   execute( renameColumnPgSqlStatement, {tableName, columnName, newColumnName} );
 }
 
