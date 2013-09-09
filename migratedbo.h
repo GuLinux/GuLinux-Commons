@@ -122,7 +122,7 @@ namespace WtCommons
       template<class Action>
       void persist( Action &a )
       {
-        Wt::Dbo::id( a, _migrationIndex, "migration_index" );
+        Wt::Dbo::field( a, _migrationIndex, "migration_index" );
         Wt::Dbo::field( a, _migrationName, "migration_name" );
         Wt::Dbo::field( a, _whenApplied, "when_applied" );
         Wt::Dbo::field( a, _whenCreated, "when_created" );
