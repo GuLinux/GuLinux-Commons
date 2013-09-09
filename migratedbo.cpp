@@ -113,7 +113,7 @@ void MigrateDboPrivate::apply()
 
     try
     {
-      currentMigration = session.find<DboMigration>().orderBy( "id ASC" ).limit( 1 ).resultValue();
+      currentMigration = session.find<DboMigration>().orderBy( "id DESC" ).limit( 1 ).resultValue();
     }
     catch
       ( ... ) {}
