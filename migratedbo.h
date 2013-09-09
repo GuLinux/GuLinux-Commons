@@ -172,6 +172,10 @@ namespace WtCommons
       void renameColumn( const std::string &tableName, const std::string &columnName, const std::string &newColumnName );
       void removeColumn( const std::string &tableName, const std::string &columnName );
       void dropTable( const std::string &tableName );
+
+      boost::posix_time::ptime whenApplied() const { return _whenApplied; }
+      boost::posix_time::ptime whenCreated() const { return _whenCreated; }
+      std::string name() const { return _migrationName; }
     private:
       int64_t _migrationIndex;
       boost::posix_time::ptime _whenApplied;

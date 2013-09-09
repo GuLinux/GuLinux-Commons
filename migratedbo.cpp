@@ -113,13 +113,15 @@ void MigrateDboPrivate::apply()
 
     try
     {
-      currentMigration = session.find<DboMigration>().orderBy( "migration_index DESC" ).limit( 1 ).resultValue();
+      currentMigration = session.find<DboMigration>().orderBy( "id ASC" ).limit( 1 ).resultValue();
     }
     catch
       ( ... ) {}
 
-    if( currentMigration )
+    if( currentMigration ) {
       migrationIndex = currentMigration->migrationIndex();
+      cerr << "Last migration found: " << migrationIndex << ", '" << currentMigration->name() << "', created: " << currentMigration->whenCreated() << ", applied: " << currentMigration->whenApplied() << endl;
+    }
   }
 
   for( int nextMigrationId = migrationIndex + 1; nextMigrationId < migrations.size(); nextMigrationId++ )
