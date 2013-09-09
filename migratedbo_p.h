@@ -45,10 +45,6 @@ namespace Wt
     template<>
     struct dbo_traits<WtCommons::DboMigration> : public dbo_default_traits
     {
-      static const char *surrogateIdField()
-      {
-        return 0;
-      }
       static const char *versionField()
       {
         return 0;
