@@ -122,14 +122,14 @@ namespace WtCommons
       template<class Action>
       void persist( Action &a )
       {
-        Wt::Dbo::id( a, _migrationId, "migration_id" );
+        Wt::Dbo::id( a, _migrationIndex, "migration_index" );
         Wt::Dbo::field( a, _migrationName, "migration_name" );
         Wt::Dbo::field( a, _whenApplied, "when_applied" );
         Wt::Dbo::field( a, _whenCreated, "when_created" );
       }
-      int64_t migrationId() const
+      int64_t migrationIndex() const
       {
-        return _migrationId;
+        return _migrationIndex;
       }
       template<typename T>
       std::string sqlType( int size = -1 ) const
@@ -137,7 +137,7 @@ namespace WtCommons
         return Wt::Dbo::sql_value_traits<T>().type( _connection, -1 );
       }
       void execute( const std::string &statement, const std::vector<std::string> &args, DboType dboType = ALL );
-      void apply( Wt::Dbo::Transaction &transaction, Wt::Dbo::SqlConnection *connection, int64_t migrationId );
+      void apply( Wt::Dbo::Transaction &transaction, Wt::Dbo::SqlConnection *connection, int64_t migrationIndex );
       CreateTable createTable( const std::string &tableName );
 
       template<typename ColumnType>
@@ -173,7 +173,7 @@ namespace WtCommons
       void removeColumn( const std::string &tableName, const std::string &columnName );
       void dropTable( const std::string &tableName );
     private:
-      int64_t _migrationId;
+      int64_t _migrationIndex;
       boost::posix_time::ptime _whenApplied;
       boost::posix_time::ptime _whenCreated;
       Migration _migration;
