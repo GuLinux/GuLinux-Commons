@@ -59,12 +59,12 @@ void QuitResource::handleRequest(const Wt::Http::Request& request, Wt::Http::Res
   }
   boost::thread t([=] {
     do
-      this_thread::sleep_for(chrono::milliseconds(500));
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
     while(!d->condition());
     WServer::instance()->log("notice") << "Server stopping as requested.";
     WServer::instance()->stop();
     while(WServer::instance()->isRunning())
-      this_thread::sleep_for(chrono::milliseconds(500));
+      boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
     if(d->restart_argc > -1)
       WServer::restart(d->restart_argc, d->restart_argv, d->restart_envp);
     exit(0);
