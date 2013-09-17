@@ -106,36 +106,38 @@ void MigrateDboPrivate::apply()
     cerr << "Tables already found" << endl;
   }
 
-  int migrationId = -1;
+  int migrationIndex = -1;
   {
     dbo::Transaction t( session );
     dbo::ptr<DboMigration> currentMigration;
 
     try
     {
-      currentMigration = session.find<DboMigration>().orderBy( "migration_id DESC" ).limit( 1 ).resultValue();
+      currentMigration = session.find<DboMigration>().orderBy( "id DESC" ).limit( 1 ).resultValue();
     }
     catch
       ( ... ) {}
 
-    if( currentMigration )
-      migrationId = currentMigration->migrationId();
+    if( currentMigration ) {
+      migrationIndex = currentMigration->migrationIndex();
+      cerr << "Last migration found: " << migrationIndex << ", '" << currentMigration->name() << "', created: " << currentMigration->whenCreated() << ", applied: " << currentMigration->whenApplied() << endl;
+    }
   }
 
-  for( int nextMigrationId = migrationId + 1; nextMigrationId < migrations.size(); nextMigrationId++ )
+  for( int nextMigrationId = migrationIndex + 1; nextMigrationId < migrations.size(); nextMigrationId++ )
   {
     dbo::Transaction t( session );
     migrations[nextMigrationId]->apply( t, connection, nextMigrationId );
   }
 }
 
-void DboMigration::apply( Dbo::Transaction &transaction, Dbo::SqlConnection *connection, int64_t migrationId )
+void DboMigration::apply( Dbo::Transaction &transaction, Dbo::SqlConnection *connection, int64_t migrationIndex )
 {
   _transaction = &transaction;
   _connection = connection;
-  _migrationId = migrationId;
+  _migrationIndex = migrationIndex;
   _whenApplied = WDateTime::currentDateTime().toPosixTime() ;
-  cerr << "Applying migration " << migrationId << ": " << _migrationName << endl;
+  cerr << "Applying migration " << migrationIndex << ": " << _migrationName << endl;
   _migration( transaction, *this );
   transaction.session().add( new DboMigration(*this) );
 }
