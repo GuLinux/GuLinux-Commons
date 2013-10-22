@@ -221,14 +221,14 @@ DboMigration::CreateTable::~CreateTable()
   _run = true;
   static string createTableTemplate = "CREATE TABLE \"%s\" (%s);";
   vector<string> columnsValues;
-  transform( columns.begin(), columns.end(), back_insert_iterator<vector<string>>( columnsValues ), []( Column p )
+  transform( begin(columns), end(columns), back_insert_iterator<vector<string>>( columnsValues ), []( Column p )
   {
     return ( boost::format( "\"%s\" %s %s" ) % p.name % p.type % p.defaultValue ).str();
   } );
 
   if( primaryKeys.size() > 0 )
   {
-    transform( primaryKeys.begin(), primaryKeys.end(), primaryKeys.begin(), []( const string & s )
+    transform( begin(primaryKeys), end(primaryKeys), begin(primaryKeys), []( const string & s )
     {
       return "\"" + s + "\"";
     } );
