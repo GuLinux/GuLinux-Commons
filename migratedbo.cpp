@@ -97,8 +97,16 @@ void MigrateDboPrivate::apply()
   {
     session.createTables();
     dbo::Transaction t( session );
-    session.add( new DboMigration(*migrations.front().get()) );
+    for(int index = 0; index < migrations.size(); index++) {
+      auto dboMigration = new DboMigration(*migrations[index]);
+      dboMigration->_whenApplied = WDateTime::currentDateTime().toPosixTime() ;
+      dboMigration->_migrationIndex = index;
+
+      session.add(dboMigration);
+    }
     t.commit();
+    cerr << "Tables created from scratch" << endl;
+    return;
   }
   catch
     ( ... )

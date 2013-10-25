@@ -184,6 +184,7 @@ namespace WtCommons
       std::string _migrationName;
       Wt::Dbo::Transaction *_transaction = 0;
       Wt::Dbo::SqlConnection *_connection = 0;
+      friend class ::WtCommonsPrivate::MigrateDboPrivate;
   };
 
   typedef std::vector<std::shared_ptr<DboMigration>> Migrations;
