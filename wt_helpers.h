@@ -145,6 +145,11 @@ template<class OtherType>
     return *this;
   }
   
+  WW &setMenu(Wt::WPopupMenu *menu) {
+    widget->setMenu(menu);
+    return *this;
+  }
+  
   template<class T>
   WW &setText(T text) {
     widget->setText(text);
