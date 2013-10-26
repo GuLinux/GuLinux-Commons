@@ -32,6 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace Wt {
   class WLayout;
+  class WPushButton;
 }
 
 #include <Wt/WWidget>
@@ -78,6 +79,11 @@ public:
   
   WidgetType *get() {
     return widget;
+  }
+  
+  WW &addButton (Wt::WPushButton *button, Wt::AlignmentFlag alignmentFlag=Wt::AlignLeft) {
+    widget->addButton(button, alignmentFlag);
+    return *this;
   }
   
   WW &add(Wt::WWidget *newWidget) {
