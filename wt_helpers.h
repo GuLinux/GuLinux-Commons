@@ -90,6 +90,10 @@ public:
     widget->addWidget(newWidget);
     return *this;
   }
+  WW &setHidden(bool hidden, const Wt::WAnimation &animation = Wt::WAnimation()) {
+    widget->setHidden(hidden, animation);
+    return *this;
+  }
   
   WW &padding(const Wt::WLength& padding, Wt::WFlags<Wt::Side > sides = Wt::All) {
     widget->setPadding(padding, sides);
