@@ -229,7 +229,7 @@ DboMigration::CreateTable::~CreateTable()
   _run = true;
   static string createTableTemplate = "CREATE TABLE \"%s\" (%s);";
   vector<string> columnsValues;
-  transform( begin(columns), end(columns), back_insert_iterator<vector<string>>( columnsValues ), []( Column p )
+  transform( begin(columns), end(columns), back_inserter( columnsValues ), []( Column p )
   {
     return ( boost::format( "\"%s\" %s %s" ) % p.name % p.type % p.defaultValue ).str();
   } );
