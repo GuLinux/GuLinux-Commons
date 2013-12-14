@@ -86,6 +86,16 @@ public:
     return *this;
   }
   
+  WW &setTarget(Wt::AnchorTarget target) {
+    widget->setTarget(target);
+    return *this;
+  }
+  
+  WW &setLinkTarget(Wt::AnchorTarget target) {
+    widget->setLinkTarget(target);
+    return *this;
+  }
+  
   WW &add(Wt::WWidget *newWidget) {
     widget->addWidget(newWidget);
     return *this;
