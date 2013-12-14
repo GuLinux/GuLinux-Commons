@@ -146,6 +146,10 @@ template<class OtherType>
     widget->resize(w,h);
     return *this;
   }
+  WW &setMinimumSize(const Wt::WLength &w, const Wt::WLength &h) {
+    widget->setMinimumSize(w,h);
+    return *this;
+  }
   WW &setLayout(Wt::WLayout *layout) {
     widget->setLayout(layout);
     return *this;
