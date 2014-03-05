@@ -111,7 +111,8 @@ public:
   }
   
   WW &button(Wt::StandardButton button, std::function<void(WidgetType*)> listener) {
-    widget->button(button)->clicked().connect([=](Wt::WMouseEvent) { listener(widget); } );
+    auto w = widget;
+    widget->button(button)->clicked().connect([=](Wt::WMouseEvent) { listener(w); } );
     return *this;
   }
   
