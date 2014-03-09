@@ -34,6 +34,11 @@ namespace WtCommons {
     string controlSize = (boost::format("col-sm-%d") % (12-d->labelColumns)).str();
     string labelSize = (boost::format("col-sm-%d") % (d->labelColumns)).str();
     string controlOffset = (boost::format("col-sm-offset-%d") % (d->labelColumns)).str();
+    if(d->type == Inline) {
+      controlSize = "";
+      labelSize = "";
+      controlOffset = "";
+    }
     WContainerWidget *container = WW<WContainerWidget>().addCss("form-group");
     if(isFormControl)
       w->addStyleClass("form-control");
@@ -43,7 +48,10 @@ namespace WtCommons {
       if(dynamic_cast<WFormWidget*>(w))
         label->setBuddy(dynamic_cast<WFormWidget*>(w));
     }
-    container->addWidget(WW<WContainerWidget>().addCss(controlSize).addCss(labelKey.empty() ? controlOffset : "").add(w));
+    if(d->type == Inline)
+      container->addWidget(w);
+    else
+      container->addWidget(WW<WContainerWidget>().addCss(controlSize).addCss(labelKey.empty() ? controlOffset : "").add(w));
     addWidget(container);
     return this;
   }
