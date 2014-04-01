@@ -47,7 +47,7 @@ WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& res
   for(fs::directory_iterator it(p); it != fs::directory_iterator(); it++) {
       if(fs::is_regular_file(it->path()) && it->path().extension().string() == ".html")
         d->processHtmlTemplate(it->path());
-      else {
+      else if(fs::is_directory(it->path())) {
         for(fs::directory_iterator sit(*it); sit != fs::directory_iterator(); sit++) {
           if(fs::is_regular_file(sit->path()) && sit->path().extension().string() == ".html")
             d->processHtmlTemplate(sit->path(), it->path().filename().string() );
