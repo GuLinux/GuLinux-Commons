@@ -122,7 +122,27 @@ template<class OtherType>
     return *this;
   }
   
+  WW &bindString(const std::string &name, const Wt::WString &s, Wt::TextFormat = Wt::XHTMLText) {
+    widget->bindString(name, s);
+    return *this;
+  }
+ 
+  WW &bindEmpty(const std::string &name) {
+    widget->bindEmpty(name);
+    return *this;
+  }
+
+ WW &bindInt(const std::string &name, int value) {
+    widget->bindInt(name, value);
+    return *this;
+  }
+
+  WW &bindWidget(const std::string &name, Wt::WWidget *w) {
+    widget->bindWidget(name, w);
+    return *this;
+  }
   
+ 
   template<typename C>
   WW &onClick(C listener) {
     widget->clicked().connect(listener);
