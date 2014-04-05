@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <Wt/WApplication>
 #include <iostream>
 #include <fstream>
+#include <boost/regex.hpp>
 
 using namespace Wt;
 using namespace boost;
@@ -35,7 +36,7 @@ namespace fs = boost::filesystem;
 namespace WtCommons { namespace WtCommonsPrivate {
 class WHTMLTemplatesLocalizedStringsPrivate {
 public:
-  void processHtmlTemplate(boost::filesystem::path path);
+  void processHtmlTemplate(boost::filesystem::path path, const std::string &locale = std::string());
   std::map<string,string> translationMap;
 };
 }}
@@ -46,12 +47,18 @@ WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& res
   for(fs::directory_iterator it(p); it != fs::directory_iterator(); it++) {
       if(fs::is_regular_file(it->path()) && it->path().extension().string() == ".html")
         d->processHtmlTemplate(it->path());
+      else if(fs::is_directory(it->path())) {
+        for(fs::directory_iterator sit(*it); sit != fs::directory_iterator(); sit++) {
+          if(fs::is_regular_file(sit->path()) && sit->path().extension().string() == ".html")
+            d->processHtmlTemplate(sit->path(), it->path().filename().string() );
+        }
+      }
   }
 }
 
-void WHTMLTemplatesLocalizedStringsPrivate::processHtmlTemplate(filesystem::path path)
+void WHTMLTemplatesLocalizedStringsPrivate::processHtmlTemplate(filesystem::path path, const string &locale)
 {
-  string key = path.filename().replace_extension().string();
+  string key = (locale.empty() ? string() : locale + "_") + path.filename().replace_extension().string();
   ifstream file(path.string());
   stringstream s;
   s << file.rdbuf();
@@ -61,6 +68,11 @@ void WHTMLTemplatesLocalizedStringsPrivate::processHtmlTemplate(filesystem::path
 
 bool WHTMLTemplatesLocalizedStrings::resolveKey(const std::string& key, std::string& result)
 {
+  string keyWithLocale = boost::regex_replace(wApp->locale().name(), boost::regex("-.*"), "" ) + "_" + key;
+  if(d->translationMap.count(keyWithLocale)>0) {
+    result = d->translationMap[keyWithLocale];
+    return true;
+  }
   if(d->translationMap.count(key)>0) {
     result = d->translationMap[key];
     return true;

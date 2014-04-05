@@ -61,6 +61,4 @@ namespace WtCommons {
     addControl(w, labelKey, isFormControl);
     return this;
   }
-
-
 } // namespace WtCommons
