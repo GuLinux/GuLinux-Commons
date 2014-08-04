@@ -12,6 +12,7 @@ namespace WtCommons {
     WForm(Type type = Default, int labelColumns = 5, Wt::WContainerWidget *parent = 0);
     WForm *addButton(Wt::WWidget *w, bool isFormControl = false);
     WForm *add(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
+    WContainerWidget *addControl(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
   private:
     class Private;
     friend class Private;
