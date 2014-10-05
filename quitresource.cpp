@@ -57,10 +57,25 @@ void QuitResource::handleRequest(const Wt::Http::Request& request, Wt::Http::Res
     response.out() << "403 Forbidden";
     return;
   }
+
+  auto action = request.getParameter("action");
+  if(action && *action == "status") {
+      static map<QuitResourcePrivate::Status, string> statuses {
+        {QuitResourcePrivate::Idle, "Idle"},
+        {QuitResourcePrivate::WaitShutdown, "Waiting for Shutdown"},
+        {QuitResourcePrivate::ShutDown, "Shutting down"},
+      };
+      response.setStatus(200);
+      response.out() << "Status: " << statuses[d->status];
+      return;
+  }
+
+  d->status = QuitResourcePrivate::WaitShutdown;
   boost::thread t([=] {
     do
       boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
     while(!d->condition());
+    d->status = QuitResourcePrivate::ShutDown;
     WServer::instance()->log("notice") << "Server stopping as requested.";
     WServer::instance()->stop();
     while(WServer::instance()->isRunning())

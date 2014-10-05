@@ -36,6 +36,8 @@ public:
   int restart_argc{-1};
   char** restart_argv;
   char** restart_envp;
+  enum Status { Idle, WaitShutdown, ShutDown };
+  Status status = Idle;
 };
 }
 }
