@@ -98,6 +98,6 @@ QuitResource* QuitResource::setRestart(int argc, char** argv, char** envp)
 
 
 QuitResource::QuitResource(std::string password, ShutdownCondition condition, WObject* parent)
-    : d(new QuitResourcePrivate(password, condition, this))
+    : WResource(parent), d(new QuitResourcePrivate(password, condition, this))
 {
 }
