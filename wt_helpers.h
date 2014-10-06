@@ -204,6 +204,11 @@ template<class OtherType>
     widget->setTextFormat(format);
     return *this;
   }
+  WW &setTextAndFormat(const Wt::WString &text, Wt::TextFormat format) {
+    widget->setTextFormat(format);
+    widget->setText(text);
+    return *this;
+  }
   
   operator WidgetType*() {
     return widget;
