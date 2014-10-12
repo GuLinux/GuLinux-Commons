@@ -20,7 +20,7 @@ class Object
 {
     struct Field {
         void *p;
-        enum Type {String, Int, LongLong, DateTime} type;
+        enum Type {String, Int, LongLong, DateTime, Object} type;
         template<typename T> struct Builder {
             static Field build(T &t);
         };
@@ -36,6 +36,7 @@ private:
     std::map<std::string, Field> fields;
     template<typename T> friend class FieldBuilder;
     void from(const Wt::Json::Object &);
+    Wt::Json::Object toWtObject() const;
 };
 
 template<typename T>
@@ -60,6 +61,10 @@ public:
 template<> class Object::Field::Builder<boost::posix_time::ptime> {
 public:
     static Object::Field asField(boost::posix_time::ptime &v) { return {&v, Object::Field::DateTime}; }
+};
+template<> class Object::Field::Builder<WtCommons::Json::Object> {
+public:
+    static Object::Field asField(WtCommons::Json::Object &v) { return {&v, Object::Field::Object}; }
 };
 
 

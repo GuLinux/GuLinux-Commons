@@ -20,30 +20,41 @@ private:
 };
 
 string Object::toJson() const {
+    return Wt::Json::serialize(toWtObject() );
+}
+
+Wt::Json::Object Object::toWtObject() const {
     Wt::Json::Object wtObject;
     for(auto v: fields) {
         Wt::Json::Value value;
         switch(v.second.type) {
-            case Field::String:
-                //value = {*reinterpret_cast<string*>(v.second.p)};
-                value = {Wt::WString::fromUTF8(Value<string>(v.second.p))};
-                break;
-            case Field::Int:
-                value = {Value<int>(v.second.p)};
-                break;
-            case Field::LongLong:
-                value = {Value<long long>(v.second.p)};
-                break;
-            case Field::DateTime: // TODO: Parameters for format choosing
-                auto t = Value<boost::posix_time::ptime>(v.second.p);
-                value = {boost::posix_time::to_iso_string(t)};
-                break;
+        case Field::String:
+            //value = {*reinterpret_cast<string*>(v.second.p)};
+            value = {Wt::WString::fromUTF8(Value<string>(v.second.p))};
+            break;
+        case Field::Int:
+            value = {Value<int>(v.second.p)};
+            break;
+        case Field::LongLong:
+            value = {Value<long long>(v.second.p)};
+            break;
+        case Field::DateTime: // TODO: Parameters for format choosing
+            value = {boost::posix_time::to_iso_string(Value<boost::posix_time::ptime>(v.second.p))};
+            break;
+        case Field::Object:
+            Wt::Json::Value another(Wt::Json::ObjectType);
+            Object &t = Value<Object>(v.second.p);
+            Wt::Json::Object &o = another;
+            o = {t.toWtObject()};
+            value = another;
+            break;
         }
 
         wtObject[v.first] = value;
     }
-    return Wt::Json::serialize(wtObject);
+    return wtObject;
 }
+
 
 void Object::fromJson(const std::string &jsonString) {
     Wt::Json::Object wtObject;
