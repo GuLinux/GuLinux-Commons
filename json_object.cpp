@@ -1,4 +1,4 @@
-#include "object.h"
+#include "json_object.h"
 #include <Wt/Json/Object>
 #include <Wt/Json/Serializer>
 #include <Wt/Json/Parser>
@@ -63,6 +63,9 @@ void Object::from(const Wt::Json::Object &object) {
             break;
         case Field::LongLong:
             Value<long long>(field.second.p).set(value);
+            break;
+        case Field::DateTime:
+            Value<boost::posix_time::ptime>(field.second.p).set(boost::posix_time::from_iso_string(value));
             break;
         }
     }
