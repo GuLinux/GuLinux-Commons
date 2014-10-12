@@ -78,6 +78,9 @@ void Object::from(const Wt::Json::Object &object) {
         case Field::DateTime:
             Value<boost::posix_time::ptime>(field.second.p).set(boost::posix_time::from_iso_string(value));
             break;
+        case Field::Object:
+            Object &object = Value<Object>(field.second.p);
+            object.from(value);
         }
     }
 }
