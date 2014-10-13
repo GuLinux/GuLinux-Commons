@@ -19,10 +19,10 @@ template<typename T> class FieldBuilder;
 class Object
 {
     struct Field {
-        enum Type {String, Int, LongLong, DateTime, Object, Vector, Null};
+        enum Type {Null, String, Int, LongLong, DateTime, Object, Vector};
         void *p;
         Type type;
-        Type arrayType;
+        Type elementsType;
         template<typename T> struct Builder {
             static Field build(T &t);
         };

@@ -18,6 +18,17 @@ private:
     T &v;
 };
 
+template<typename V, template<typename> class C> class Container {
+public:
+    Container(void *p) : v(*reinterpret_cast<C<V>*>(p)) {}
+    operator C<V>&() const { return v;}
+    operator Wt::Json::Value() const { return {v}; }
+    void set(const C<V> &t) { v = t; }
+private:
+    C<V> &v;
+};
+template<typename T> using Vector = vector<T>;
+
 template<> class Value<boost::posix_time::ptime> {
 public:
     Value(void *p) : v(*reinterpret_cast<boost::posix_time::ptime*>(p)) {}
@@ -95,28 +106,32 @@ template<typename T> void toValue(Wt::Json::Value &v, void *p) {
     v = Value<T>(p);
 }
 
+template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, void *p) {
+    Wt::Json::Value _v(Wt::Json::ArrayType);
+    Wt::Json::Array &a = _v;
+    C<V>  _container = Container<V, C>{p};
+    std::copy(begin(_container), end(_container), back_inserter(a));
+    v = _v;
+}
+
 
 Wt::Json::Object Object::toWtObject() const {
     typedef function<void(Wt::Json::Value &, void *)> Exporter;
-    static map<Field::Type, Exporter> exporters {
-        {Field::String, toValue<std::string> },
-        {Field::Int, toValue<int> },
-        {Field::LongLong, toValue<long long> },
-        {Field::DateTime, toValue<boost::posix_time::ptime> },
-        {Field::Object, toValue<Object> },
-        {Field::Vector, [](Wt::Json::Value &v, void *p){
-                Wt::Json::Value _v(Wt::Json::ArrayType);
-                Wt::Json::Array &a = _v;
-                std::vector<int> _vector = Value<std::vector<int>>{p};
-                std::copy(begin(_vector), end(_vector), back_inserter(a));
-                v = _v;
-            } },
+    typedef pair<Field::Type, Field::Type> FieldType;
+
+    static map<FieldType, Exporter> exporters {
+        {{Field::String, Field::Null}, toValue<std::string> },
+        {{Field::Int, Field::Null}, toValue<int> },
+        {{Field::LongLong, Field::Null}, toValue<long long> },
+        {{Field::DateTime, Field::Null}, toValue<boost::posix_time::ptime> },
+        {{Field::Object, Field::Null}, toValue<Object> },
+        {{Field::Vector, Field::Int}, toContainer<int, Vector> },
     };
 
     Wt::Json::Object wtObject;
     for(auto v: fields) {
         Wt::Json::Value value;
-        exporters[v.second.type](value, v.second.p);
+        exporters[{v.second.type, v.second.elementsType}](value, v.second.p);
         wtObject[v.first] = value;
     }
     return wtObject;
