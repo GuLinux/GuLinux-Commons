@@ -115,9 +115,19 @@ template<typename V, template<typename> class C> void toContainer(Wt::Json::Valu
 }
 
 
+struct Mapping {
+    typedef function<void(Wt::Json::Value &, void *)> Exporter;
+    typedef function<void(Wt::Json::Value &, void *)> Importer;
+
+    Exporter exporter;
+    Importer importer;
+};
+
+static map<Object::Field::Type, Mapping> mappings;
+
 Wt::Json::Object Object::toWtObject() const {
     typedef function<void(Wt::Json::Value &, void *)> Exporter;
-    typedef pair<Field::Type, Field::Type> FieldType;
+    typedef pair<Field::Types, Field::Types> FieldType;
 
     static map<FieldType, Exporter> exporters {
         {{Field::String, Field::Null}, toValue<std::string> },
@@ -147,7 +157,7 @@ void Object::fromJson(const std::string &jsonString) {
 void Object::from(const Wt::Json::Object &object) {
     typedef function<void(Wt::Json::Value &, void *)> Importer;
 
-    static map<Field::Type, Importer> importers {
+    static map<Field::Types, Importer> importers {
         {Field::String, [](Wt::Json::Value &v, void *p) { Value<string>(p).set(v); } },
         {Field::Int, [](Wt::Json::Value &v, void *p) { Value<int>(p).set(v); } },
         {Field::LongLong, [](Wt::Json::Value &v, void *p) { Value<long long>(p).set(v); } },

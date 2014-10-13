@@ -18,17 +18,22 @@ namespace Json {
 template<typename T> class FieldBuilder;
 class Object
 {
+public:
     struct Field {
-        enum Type {Null, String, Int, LongLong, DateTime, Object, Vector};
+        enum Types {Null, String, Int, LongLong, DateTime, Object, Vector};
         void *p;
-        Type type;
-        Type elementsType;
+	struct Type {
+	  Types element;
+	  Types nested;
+	  bool operator<(const Type &o) const { return element < o.element && nested < o.nested; }
+	};
+        Types type;
+        Types elementsType;
         template<typename T> struct Builder {
             static Field build(T &t);
         };
     };
 
-public:
     template<typename T>
     Object &addField(const std::string &name, T &field);
 
