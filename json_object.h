@@ -15,20 +15,19 @@ class Object;
 namespace WtCommons {
 namespace Json {
 
-template<typename T> class FieldBuilder;
 class Object
 {
 public:
     struct Field {
-        enum Types {Null, String, Int, LongLong, DateTime, Object, Vector};
+        enum Types {Null = 0x0, String = 0x1, Int = 0x2, LongLong = 0x3, DateTime = 0x4, Object = 0x10, Vector = 0x20};
         void *p;
 	struct Type {
 	  Types element;
 	  Types nested;
-	  bool operator<(const Type &o) const { return element < o.element && nested < o.nested; }
+	  bool operator<(const Type &o) const { return element*100+nested < o.element*100 + o.nested; }
 	};
-        Types type;
-        Types elementsType;
+        Type type;
+        std::string label;
         template<typename T> struct Builder {
             static Field build(T &t);
         };
@@ -40,10 +39,9 @@ public:
     std::string toJson() const;
     void fromJson(const std::string &jsonString);
     Wt::Json::Object toWtObject() const;
-private:
-    std::map<std::string, Field> fields;
-    template<typename T> friend class FieldBuilder;
     void from(const Wt::Json::Object &);
+private:
+    std::vector<Field> fields;
 };
 
 } // namespace Json

@@ -13,7 +13,7 @@ public:
     Value(void *p) : v(*reinterpret_cast<T*>(p)) {}
     operator T&() const { return v;}
     operator Wt::Json::Value() const { return {v}; }
-    void set(const T &t) { v = t; }
+    void set(const Wt::Json::Value &t) { v = t; }
 private:
     T &v;
 };
@@ -23,10 +23,11 @@ public:
     Container(void *p) : v(*reinterpret_cast<C<V>*>(p)) {}
     operator C<V>&() const { return v;}
     operator Wt::Json::Value() const { return {v}; }
-    void set(const C<V> &t) { v = t; }
+    void set(const Wt::Json::Value &t) { /* TODO */ }
 private:
     C<V> &v;
 };
+
 template<typename T> using Vector = vector<T>;
 
 template<> class Value<boost::posix_time::ptime> {
@@ -34,9 +35,18 @@ public:
     Value(void *p) : v(*reinterpret_cast<boost::posix_time::ptime*>(p)) {}
     operator boost::posix_time::ptime&() const { return v;}
     operator Wt::Json::Value() const { return {boost::posix_time::to_iso_string(v)}; }
-    void set(const boost::posix_time::ptime &t) { v = t; }
+    void set(const Wt::Json::Value &t) { v = boost::posix_time::from_iso_string(t); }
 private:
     boost::posix_time::ptime &v;
+};
+template<> class Value<string> {
+public:
+    Value(void *p) : v(*reinterpret_cast<string*>(p)) {}
+    operator string&() const { return v;}
+    operator Wt::Json::Value() const { return {v}; }
+    void set(const Wt::Json::Value &t) { v = t.toString().orIfNull(""); }
+private:
+    string &v;
 };
 
 template<> class Value<Object> {
@@ -49,7 +59,7 @@ public:
         o = {this->v.toWtObject()};
         return another;
     }
-    void set(const Object &t) { v = t; }
+    void set(const Wt::Json::Value &t) {v.from(t); }
 private:
     Object &v;
 
@@ -88,8 +98,10 @@ string Object::toJson() const {
 
 
 template<typename T>
-Object &Object::addField(const std::string &name, T &field) {
-    fields[name] = Field::Builder<T>::asField(field);
+Object &Object::addField(const std::string &name, T &f) {
+    auto field = Field::Builder<T>::asField(f);
+    field.label = name;
+    fields.push_back(field);
     return *this;
 }
 
@@ -104,6 +116,10 @@ template Object &Object::addField(const std::string &, std::vector<int> &field);
 
 template<typename T> void toValue(Wt::Json::Value &v, void *p) {
     v = Value<T>(p);
+}
+
+template<typename T> void fromValue(Wt::Json::Value &v, void *p) {
+  Value<T>(p).set(v);
 }
 
 template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, void *p) {
@@ -123,26 +139,27 @@ struct Mapping {
     Importer importer;
 };
 
+
+#ifdef IN_IDE_PARSER
 static map<Object::Field::Type, Mapping> mappings;
+#else
+static map<Object::Field::Type, Mapping> mappings
+{
+  {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>}},
+  {{Object::Field::Object, Object::Field::Null}, {toValue<Object>, fromValue<Object>}},
+  {{Object::Field::String, Object::Field::Null}, {toValue<string>, fromValue<string>}},
+  {{Object::Field::Int, Object::Field::Null}, {toValue<int>, fromValue<int>}},
+  {{Object::Field::LongLong, Object::Field::Null}, {toValue<long long>, fromValue<long long>}},
+  {{Object::Field::DateTime, Object::Field::Null}, {toValue<boost::posix_time::ptime>, fromValue<boost::posix_time::ptime>}},
+};
+#endif
 
 Wt::Json::Object Object::toWtObject() const {
-    typedef function<void(Wt::Json::Value &, void *)> Exporter;
-    typedef pair<Field::Types, Field::Types> FieldType;
-
-    static map<FieldType, Exporter> exporters {
-        {{Field::String, Field::Null}, toValue<std::string> },
-        {{Field::Int, Field::Null}, toValue<int> },
-        {{Field::LongLong, Field::Null}, toValue<long long> },
-        {{Field::DateTime, Field::Null}, toValue<boost::posix_time::ptime> },
-        {{Field::Object, Field::Null}, toValue<Object> },
-        {{Field::Vector, Field::Int}, toContainer<int, Vector> },
-    };
-
     Wt::Json::Object wtObject;
     for(auto v: fields) {
         Wt::Json::Value value;
-        exporters[{v.second.type, v.second.elementsType}](value, v.second.p);
-        wtObject[v.first] = value;
+        mappings[v.type].exporter(value, v.p);
+        wtObject[v.label] = value;
     }
     return wtObject;
 }
@@ -155,19 +172,9 @@ void Object::fromJson(const std::string &jsonString) {
 }
 
 void Object::from(const Wt::Json::Object &object) {
-    typedef function<void(Wt::Json::Value &, void *)> Importer;
-
-    static map<Field::Types, Importer> importers {
-        {Field::String, [](Wt::Json::Value &v, void *p) { Value<string>(p).set(v); } },
-        {Field::Int, [](Wt::Json::Value &v, void *p) { Value<int>(p).set(v); } },
-        {Field::LongLong, [](Wt::Json::Value &v, void *p) { Value<long long>(p).set(v); } },
-        {Field::DateTime, [](Wt::Json::Value &v, void *p) { Value<boost::posix_time::ptime>(p).set(boost::posix_time::from_iso_string(v)); } },
-        {Field::Object, [](Wt::Json::Value &v, void *p) { Object &object = Value<Object>(p); object.from(v); } },
-    };
-
     for(auto field: fields) {
-        auto value = object.at(field.first);
-        importers[field.second.type](value, field.second.p);
+        auto value = object.at(field.label);
+        mappings[field.type].importer(value, field.p);
     }
 }
 
