@@ -14,7 +14,11 @@ class Object;
 
 namespace WtCommons {
 namespace Json {
-
+template<typename T> using Vector = std::vector<T>;
+template<class T> class default_create {
+public:
+  operator T() const { return T{}; }
+};
 class Object
 {
 public:
@@ -29,12 +33,24 @@ public:
         Type type;
         std::string label;
         template<typename T> struct Builder {
-            static Field build(T &t);
+            static Field asField(T &t);
+        };
+        template<typename T, template<typename> class C> struct ContainerBuilder {
+            static Field asField(C<T> &t);
         };
     };
 
-    template<typename T>
-    Object &addField(const std::string &name, T &field);
+    template<typename T, template<typename> class C, typename Creator = default_create<T>> Object &addField(const std::string &name, C<T> &f) {
+      return push_field(Field::ContainerBuilder<T, C>::asField(f), name);
+    }
+    template<typename T, typename Creator = default_create<T>> Object &addField(const std::string &name, T &f) {
+      return push_field(Field::Builder<T>::asField(f), name);
+    }
+    Object &push_field(Field field, const std::string &name) {
+      field.label = name;
+      fields.push_back(field);
+      return *this;
+    }
 
     std::string toJson() const;
     void fromJson(const std::string &jsonString);

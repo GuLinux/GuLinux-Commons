@@ -86,7 +86,7 @@ template<> class Object::Field::Builder<WtCommons::Json::Object> {
 public:
     static Object::Field asField(WtCommons::Json::Object &v) { return {&v, Object::Field::Object}; }
 };
-template<> class Object::Field::Builder<std::vector<int>> {
+template<> class Object::Field::ContainerBuilder<int, Vector> {
 public:
     static Object::Field asField(std::vector<int> &v) { return {&v, Object::Field::Vector, Object::Field::Int}; }
 };
@@ -97,21 +97,12 @@ string Object::toJson() const {
 }
 
 
-template<typename T>
-Object &Object::addField(const std::string &name, T &f) {
-    auto field = Field::Builder<T>::asField(f);
-    field.label = name;
-    fields.push_back(field);
-    return *this;
-}
-
-
 template Object &Object::addField(const std::string &, std::string &field);
 template Object &Object::addField(const std::string &, int &field);
 template Object &Object::addField(const std::string &, long long &field);
 template Object &Object::addField(const std::string &, boost::posix_time::ptime &field);
 template Object &Object::addField(const std::string &, Object &field);
-template Object &Object::addField(const std::string &, std::vector<int> &field);
+template Object &Object::addField<int, Vector>(const std::string &, std::vector<int> &field);
 
 
 template<typename T> void toValue(Wt::Json::Value &v, void *p) {

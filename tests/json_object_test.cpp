@@ -28,9 +28,9 @@ template<typename T>
 class AnObjectWithAnArray : public WtCommons::Json::Object {
 public:
     AnObjectWithAnArray() {
-        addField<std::vector<T>>("an-array", anArray).addField<int>("number", _number);
+        addField<T, WtCommons::Json::Vector>("an-array", anArray).addField<int>("number", _number);
     }
-    std::vector<T> anArray;
+    WtCommons::Json::Vector<T> anArray;
     int _number;
 };
 
