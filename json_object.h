@@ -40,10 +40,10 @@ public:
         };
     };
 
-    template<typename T, template<typename> class C, typename Creator = default_create<T>> Object &addField(const std::string &name, C<T> &f) {
+    template<typename T, template<typename> class C, typename Creator = default_create<T>> Object &addField(const std::string &name, C<T> &f, Creator creator = {}) {
       return push_field(Field::ContainerBuilder<T, C>::asField(f), name);
     }
-    template<typename T, typename Creator = default_create<T>> Object &addField(const std::string &name, T &f) {
+    template<typename T, typename Creator = default_create<T>> Object &addField(const std::string &name, T &f, Creator creator = {}) {
       return push_field(Field::Builder<T>::asField(f), name);
     }
     Object &push_field(Field field, const std::string &name) {
@@ -59,6 +59,33 @@ public:
 private:
     std::vector<Field> fields;
 };
+
+
+template<> class Object::Field::Builder<std::string> {
+public:
+    static Object::Field asField(std::string &s) { return {&s, Object::Field::String}; }
+};
+template<> class Object::Field::Builder<int> {
+public:
+    static Object::Field asField(int &i) { return {&i, Object::Field::Int}; }
+};
+template<> class Object::Field::Builder<long long> {
+public:
+    static Object::Field asField(long long &i) { return {&i, Object::Field::LongLong}; }
+};
+template<> class Object::Field::Builder<boost::posix_time::ptime> {
+public:
+    static Object::Field asField(boost::posix_time::ptime &v) { return {&v, Object::Field::DateTime}; }
+};
+template<> class Object::Field::Builder<WtCommons::Json::Object> {
+public:
+    static Object::Field asField(WtCommons::Json::Object &v) { return {&v, Object::Field::Object}; }
+};
+template<> class Object::Field::ContainerBuilder<int, Vector> {
+public:
+    static Object::Field asField(std::vector<int> &v) { return {&v, Object::Field::Vector, Object::Field::Int}; }
+};
+
 
 } // namespace Json
 } // namespace WtCommons
