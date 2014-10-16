@@ -59,8 +59,8 @@ public:
     }
     Object &push_field(Field field, const std::string &name, void *valueConverter) {
       field.label = name;
-      fields.push_back(field);
       field.valueConverter.reset(valueConverter);
+      fields.push_back(field);
       return *this;
     }
 

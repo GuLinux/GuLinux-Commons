@@ -47,6 +47,13 @@ public:
     AnObject _anObject;
 };
 
+BOOST_AUTO_TEST_CASE(TestFieldWithString) {
+   std::string foo("fuffa");
+   WtCommons::Json::Object::Field field;
+   field.p = &foo;
+   field.valueConverter.reset(new WtCommons::Json::Object::Value<std::string>);
+   BOOST_REQUIRE_EQUAL(foo, field.value<std::string>());
+}
 BOOST_AUTO_TEST_CASE(TestConstruction) {
     AnObject anObject(5, "3");
 

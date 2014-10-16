@@ -72,26 +72,30 @@ string Object::toJson() const {
 
 
 
-template<typename T> void toValue(Wt::Json::Value &v, void *p) {
-    v = Value<T>(p);
+template<typename T> void toValue(Wt::Json::Value &v, const Object::Field &field) {
+    v = Value<T>(field.p);
 }
 
-template<typename T> void fromValue(Wt::Json::Value &v, void *p) {
-  Value<T>(p).set(v);
+template<typename T> void toValueField(Wt::Json::Value &v, const Object::Field &field) {
+    v = {field.value<T>()};
 }
 
-template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, void *p) {
+template<typename T> void fromValue(Wt::Json::Value &v, const Object::Field &field) {
+  Value<T>(field.p).set(v);
+}
+
+template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, const Object::Field &field) {
     Wt::Json::Value _v(Wt::Json::ArrayType);
     Wt::Json::Array &a = _v;
-    C<V>  _container = Container<V, C>{p};
+    C<V>  _container = Container<V, C>{field.p};
     std::copy(begin(_container), end(_container), back_inserter(a));
     v = _v;
 }
 
 
 struct Mapping {
-    typedef function<void(Wt::Json::Value &, void *)> Exporter;
-    typedef function<void(Wt::Json::Value &, void *)> Importer;
+    typedef function<void(Wt::Json::Value &, const Object::Field&)> Exporter;
+    typedef function<void(Wt::Json::Value &, const Object::Field&)> Importer;
 
     Exporter exporter;
     Importer importer;
@@ -105,7 +109,7 @@ static map<Object::Field::Type, Mapping> mappings
 {
   {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>}},
   {{Object::Field::Object, Object::Field::Null}, {toValue<Object>, fromValue<Object>}},
-  {{Object::Field::String, Object::Field::Null}, {toValue<string>, fromValue<string>}},
+  {{Object::Field::String, Object::Field::Null}, {toValueField<string>, fromValue<string>}},
   {{Object::Field::Int, Object::Field::Null}, {toValue<int>, fromValue<int>}},
   {{Object::Field::LongLong, Object::Field::Null}, {toValue<long long>, fromValue<long long>}},
   {{Object::Field::DateTime, Object::Field::Null}, {toValue<boost::posix_time::ptime>, fromValue<boost::posix_time::ptime>}},
@@ -116,7 +120,7 @@ Wt::Json::Object Object::toWtObject() const {
     Wt::Json::Object wtObject;
     for(auto v: fields) {
         Wt::Json::Value value;
-        mappings[v.type].exporter(value, v.p);
+        mappings[v.type].exporter(value, v);
         wtObject[v.label] = value;
     }
     return wtObject;
@@ -132,7 +136,7 @@ void Object::fromJson(const std::string &jsonString) {
 void Object::from(const Wt::Json::Object &object) {
     for(auto field: fields) {
         auto value = object.at(field.label);
-        mappings[field.type].importer(value, field.p);
+        mappings[field.type].importer(value, field);
     }
 }
 
