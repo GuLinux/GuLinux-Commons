@@ -43,11 +43,17 @@ public:
       template<typename T, template<typename> class C> struct ContainerBuilder {
 	  static Field asField(C<T> &t);
       };
+      
+      template<typename T> T &value() const {
+      Object::Value<T> *c = reinterpret_cast<Object::Value<T>*>(valueConverter.get());
+      return c->value(p);
+    }
   };
 
     template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
       return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
     }
+
     template<typename T> Object &addField(const std::string &name, T &f, Object::Value<T> *converter = new Object::Value<T>() ) {
       return push_field(Field::Builder<T>::asField(f), name, reinterpret_cast<void*>(converter));
     }
