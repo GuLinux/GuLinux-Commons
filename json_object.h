@@ -15,40 +15,46 @@ class Object;
 namespace WtCommons {
 namespace Json {
 template<typename T> using Vector = std::vector<T>;
-template<class T> class default_create {
-public:
-  operator T() const { return T{}; }
-};
+
 class Object
 {
 public:
-    struct Field {
-        enum Types {Null = 0x0, String = 0x1, Int = 0x2, LongLong = 0x3, DateTime = 0x4, Object = 0x10, Vector = 0x20};
-        void *p;
-	struct Type {
-	  Types element;
-	  Types nested;
-	  bool operator<(const Type &o) const { return element*100+nested < o.element*100 + o.nested; }
-	};
-        Type type;
-        std::string label;
-        template<typename T> struct Builder {
-            static Field asField(T &t);
-        };
-        template<typename T, template<typename> class C> struct ContainerBuilder {
-            static Field asField(C<T> &t);
-        };
-    };
+  template<typename T> class Value {
+  public:
+    T& value(void *p) { return convert_pointer(p); }
+  protected:
+    virtual T &convert_pointer(void *p) { return *reinterpret_cast<T*>(p); }
+  };
+  
+  struct Field {
+      enum Types {Null = 0x0, String = 0x1, Int = 0x2, LongLong = 0x3, DateTime = 0x4, Object = 0x10, Vector = 0x20};
+      void *p;
+      struct Type {
+	Types element;
+	Types nested;
+	bool operator<(const Type &o) const { return element*100+nested < o.element*100 + o.nested; }
+      };
+      Type type;
+      std::string label;
+      std::shared_ptr<void> valueConverter;
+      template<typename T> struct Builder {
+	  static Field asField(T &t);
+      };
+      template<typename T, template<typename> class C> struct ContainerBuilder {
+	  static Field asField(C<T> &t);
+      };
+  };
 
-    template<typename T, template<typename> class C, typename Creator = default_create<T>> Object &addField(const std::string &name, C<T> &f, Creator creator = {}) {
-      return push_field(Field::ContainerBuilder<T, C>::asField(f), name);
+    template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
+      return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
     }
-    template<typename T, typename Creator = default_create<T>> Object &addField(const std::string &name, T &f, Creator creator = {}) {
-      return push_field(Field::Builder<T>::asField(f), name);
+    template<typename T> Object &addField(const std::string &name, T &f, Object::Value<T> *converter = new Object::Value<T>() ) {
+      return push_field(Field::Builder<T>::asField(f), name, reinterpret_cast<void*>(converter));
     }
-    Object &push_field(Field field, const std::string &name) {
+    Object &push_field(Field field, const std::string &name, void *valueConverter) {
       field.label = name;
       fields.push_back(field);
+      field.valueConverter.reset(valueConverter);
       return *this;
     }
 
