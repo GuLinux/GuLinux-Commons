@@ -12,7 +12,6 @@ template<typename V, template<typename> class C> class Container {
 public:
     Container(void *p) : v(*reinterpret_cast<C<V>*>(p)) {}
     operator C<V>&() const { return v;}
-    operator Wt::Json::Value() const { return {v}; }
     void set(const Wt::Json::Value &t) { /* TODO */ }
 private:
     C<V> &v;
