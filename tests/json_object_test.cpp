@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(TestFieldWithString) {
    std::string foo("fuffa");
    WtCommons::Json::Object::Field field;
    field.p = &foo;
-   field.valueConverter.reset(new WtCommons::Json::Object::Value<std::string>);
+   field.valueConverter = (new WtCommons::Json::ObjectValue<std::string>);
    BOOST_REQUIRE_EQUAL(foo, field.value<std::string>());
 }
 BOOST_AUTO_TEST_CASE(TestConstruction) {
@@ -62,6 +62,40 @@ BOOST_AUTO_TEST_CASE(TestConstruction) {
 
     BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), anObject.toJson());
 }
+
+BOOST_AUTO_TEST_CASE(TestUnixTime) {
+  struct TimeObject : public WtCommons::Json::Object {
+    TimeObject() { addField<boost::posix_time::ptime>("aTime", time); }
+    boost::posix_time::ptime time;
+  } timeObject;
+  timeObject.time = boost::posix_time::from_iso_string("20141012T123323");
+  Wt::Json::Object o;
+  Wt::Json::parse(R"({"aTime" : 1413117203 })", o);
+
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), timeObject.toJson());
+  
+  timeObject.time = {};
+  timeObject.fromJson(R"({"aTime" : 1413117203 })");
+  BOOST_REQUIRE_EQUAL(boost::posix_time::from_iso_string("20141012T123323"), timeObject.time);
+}
+
+BOOST_AUTO_TEST_CASE(TestUnixTimeAsPosixString) {
+  struct TimeObject : public WtCommons::Json::Object {
+    TimeObject() { addField<boost::posix_time::ptime>("aTime", time, new WtCommons::Json::PosixTimeValue); }
+    boost::posix_time::ptime time;
+  } timeObject;
+  timeObject.time = boost::posix_time::from_iso_string("20141012T123323");
+  Wt::Json::Object o;
+  Wt::Json::parse(R"({"aTime" : "20141012T123323" })", o);
+
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), timeObject.toJson());
+  
+  timeObject.time = {};
+  timeObject.fromJson(R"({"aTime" : "20141012T123323" })");
+  BOOST_REQUIRE_EQUAL(boost::posix_time::from_iso_string("20141012T123323"), timeObject.time);
+
+}
+
 BOOST_AUTO_TEST_CASE(TestConstructionWithArray) {
     AnObjectWithAnArray<int> anObject;
     anObject._number = 4;

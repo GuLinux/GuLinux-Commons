@@ -4,10 +4,12 @@
 #include <memory>
 #include <map>
 #include <boost/date_time.hpp>
+#include <Wt/Json/Value>
+#include <Wt/Json/Object>
+#include <Wt/WDateTime>
 
 namespace Wt {
 namespace Json {
-class Value;
 class Object;
 }
 }
@@ -16,17 +18,24 @@ namespace WtCommons {
 namespace Json {
 template<typename T> using Vector = std::vector<T>;
 
+
+template<typename T> class ObjectValue {
+public:
+  virtual T& value(void *p) const { return convert_pointer(p); }
+  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {value(p)}; return v; }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = v; }
+protected:
+  virtual T &convert_pointer(void *p) const { return *reinterpret_cast<T*>(p); }
+};
+
+
+
 class Object
 {
 public:
-  template<typename T> class Value {
-  public:
-    T& value(void *p) { return convert_pointer(p); }
-  protected:
-    virtual T &convert_pointer(void *p) { return *reinterpret_cast<T*>(p); }
-  };
   
   struct Field {
+    // TODO: memory cleanup
       enum Types {Null = 0x0, String = 0x1, Int = 0x2, LongLong = 0x3, DateTime = 0x4, Object = 0x10, Vector = 0x20};
       void *p;
       struct Type {
@@ -36,17 +45,18 @@ public:
       };
       Type type;
       std::string label;
-      std::shared_ptr<void> valueConverter;
-      template<typename T> struct Builder {
-	  static Field asField(T &t);
-      };
+      void *valueConverter;
+      template<typename T> struct Builder { static Field asField(T &t); };
       template<typename T, template<typename> class C> struct ContainerBuilder {
 	  static Field asField(C<T> &t);
       };
       
-      template<typename T> T &value() const {
-      Object::Value<T> *c = reinterpret_cast<Object::Value<T>*>(valueConverter.get());
-      return c->value(p);
+      template<typename T> T &value() const { return converter<T>()->value(p); }
+      template<typename T> Wt::Json::Value json() const { return converter<T>()->json(p); }
+      template<typename T> void fromJson(const Wt::Json::Value &v) const { return converter<T>()->fromJson(p, v); }
+    
+    template<typename T> ObjectValue<T> *converter() const {
+      return reinterpret_cast<ObjectValue<T>*>(valueConverter);
     }
   };
 
@@ -54,12 +64,12 @@ public:
       return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
     }
 
-    template<typename T> Object &addField(const std::string &name, T &f, Object::Value<T> *converter = new Object::Value<T>() ) {
+    template<typename T> Object &addField(const std::string &name, T &f, ObjectValue<T> *converter = new ObjectValue<T>() ) {
       return push_field(Field::Builder<T>::asField(f), name, reinterpret_cast<void*>(converter));
     }
     Object &push_field(Field field, const std::string &name, void *valueConverter) {
       field.label = name;
-      field.valueConverter.reset(valueConverter);
+      field.valueConverter = (valueConverter);
       fields.push_back(field);
       return *this;
     }
@@ -98,6 +108,44 @@ public:
     static Object::Field asField(std::vector<int> &v) { return {&v, Object::Field::Vector, Object::Field::Int}; }
 };
 
+
+template<> class ObjectValue<std::string> {
+public:
+  virtual std::string& value(void *p) const { return convert_pointer(p); }
+  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {Wt::WString::fromUTF8(value(p))}; return v; }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = v.toString().orIfNull(""); }
+
+protected:
+  virtual std::string &convert_pointer(void *p) const { return *reinterpret_cast<std::string*>(p); }
+};
+template<> class ObjectValue<Object> {
+public:
+  virtual Object& value(void *p) const { return convert_pointer(p); }
+  virtual Wt::Json::Value json(void *p) const { 
+    Wt::Json::Value v{Wt::Json::ObjectType};
+    Wt::Json::Object &o = v;
+    o = value(p).toWtObject();
+    return v;
+  }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p).from(v); }
+protected:
+  virtual Object &convert_pointer(void *p) const { return *reinterpret_cast<Object*>(p); }
+};
+template<> class ObjectValue<boost::posix_time::ptime> {
+public:
+  virtual boost::posix_time::ptime& value(void *p) const { return convert_pointer(p); }
+  virtual Wt::Json::Value json(void *p) const { return {static_cast<long long>(Wt::WDateTime::fromPosixTime(value(p)).toTime_t())}; }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { long long timeT = v; convert_pointer(p) = boost::posix_time::from_time_t(timeT); }
+
+protected:
+  virtual boost::posix_time::ptime &convert_pointer(void *p) const { return *reinterpret_cast<boost::posix_time::ptime*>(p); }
+};
+
+class PosixTimeValue : public ObjectValue<boost::posix_time::ptime> {
+public:
+  virtual Wt::Json::Value json(void *p) const { return {boost::posix_time::to_iso_string(value(p))}; }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = boost::posix_time::from_iso_string(v.toString().orIfNull("")); }
+};
 
 } // namespace Json
 } // namespace WtCommons
