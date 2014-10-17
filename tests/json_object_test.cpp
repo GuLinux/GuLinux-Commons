@@ -51,7 +51,7 @@ BOOST_AUTO_TEST_CASE(TestFieldWithString) {
    std::string foo("fuffa");
    WtCommons::Json::Object::Field field;
    field.p = &foo;
-   field.valueConverter = (new WtCommons::Json::ObjectValue<std::string>);
+   field.valueConverter = (new WtCommons::Json::Value<std::string>);
    BOOST_REQUIRE_EQUAL(foo, field.value<std::string>());
 }
 BOOST_AUTO_TEST_CASE(TestConstruction) {
