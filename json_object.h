@@ -19,16 +19,18 @@ namespace Json {
 template<typename T> using Vector = std::vector<T>;
 
 
-template<typename T> class Value {
+template<typename T> class ValueBase {
 public:
   virtual T& value(void *p) const { return convert_pointer(p); }
-  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {value(p)}; return v; }
-  virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = v; }
 protected:
   virtual T &convert_pointer(void *p) const { return *reinterpret_cast<T*>(p); }
 };
 
-
+template<typename T> class Value : public ValueBase<T> {
+public:
+  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {ValueBase<T>::value(p)}; return v; }
+  virtual void fromJson(void *p, const Wt::Json::Value &v) const { ValueBase<T>::convert_pointer(p) = v; }
+};
 
 class Object
 {
@@ -109,18 +111,13 @@ public:
 };
 
 
-template<> class Value<std::string> {
+template<> class Value<std::string> : public ValueBase<std::string> {
 public:
-  virtual std::string& value(void *p) const { return convert_pointer(p); }
   virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {Wt::WString::fromUTF8(value(p))}; return v; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = v.toString().orIfNull(""); }
-
-protected:
-  virtual std::string &convert_pointer(void *p) const { return *reinterpret_cast<std::string*>(p); }
 };
-template<> class Value<Object> {
+template<> class Value<Object> : public ValueBase<Object> {
 public:
-  virtual Object& value(void *p) const { return convert_pointer(p); }
   virtual Wt::Json::Value json(void *p) const { 
     Wt::Json::Value v{Wt::Json::ObjectType};
     Wt::Json::Object &o = v;
@@ -128,17 +125,12 @@ public:
     return v;
   }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p).from(v); }
-protected:
-  virtual Object &convert_pointer(void *p) const { return *reinterpret_cast<Object*>(p); }
 };
-template<> class Value<boost::posix_time::ptime> {
+
+template<> class Value<boost::posix_time::ptime> : public ValueBase<boost::posix_time::ptime> {
 public:
-  virtual boost::posix_time::ptime& value(void *p) const { return convert_pointer(p); }
   virtual Wt::Json::Value json(void *p) const { return {static_cast<long long>(Wt::WDateTime::fromPosixTime(value(p)).toTime_t())}; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { long long timeT = v; convert_pointer(p) = boost::posix_time::from_time_t(timeT); }
-
-protected:
-  virtual boost::posix_time::ptime &convert_pointer(void *p) const { return *reinterpret_cast<boost::posix_time::ptime*>(p); }
 };
 
 class PosixTimeValue : public Value<boost::posix_time::ptime> {
