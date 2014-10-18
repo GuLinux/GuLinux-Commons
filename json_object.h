@@ -84,6 +84,14 @@ private:
 };
 
 
+class Array {
+public:
+  template<typename V, template<typename> class C> Array(C<V> &c) : p(&c) {}
+  template<typename V, template<typename> class C> C<V> &get() const { return *reinterpret_cast<C<V>*>(p); }
+private:
+  void *p;
+};
+
 template<> class Object::Field::Builder<std::string> {
 public:
     static Object::Field asField(std::string &s) { return {&s, Object::Field::String}; }
