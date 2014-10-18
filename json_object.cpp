@@ -37,13 +37,20 @@ template<typename V, template<typename> class C> void toContainer(Wt::Json::Valu
     v = _v;
 }
 
+template<typename T> void deleter(const Object::Field &field) {
+  // cout << "Deleting with type: " << typeid(T).name() << endl;
+  //delete field.converter<T>(); TODO
+}
+
 
 struct Mapping {
     typedef function<void(Wt::Json::Value &, const Object::Field&)> Exporter;
     typedef function<void(Wt::Json::Value &, const Object::Field&)> Importer;
+    typedef function<void(const Object::Field&)> Deleter;
 
     Exporter exporter;
     Importer importer;
+    Deleter deleter;
 };
 
 
@@ -52,14 +59,23 @@ static map<Object::Field::Type, Mapping> mappings;
 #else
 static map<Object::Field::Type, Mapping> mappings
 {
-  {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>}},
-  {{Object::Field::Object, Object::Field::Null}, {toValueField<Object>, fromValueField<Object>}},
-  {{Object::Field::String, Object::Field::Null}, {toValueField<string>, fromValueField<string>}},
-  {{Object::Field::Int, Object::Field::Null}, {toValueField<int>, fromValueField<int>}},
-  {{Object::Field::LongLong, Object::Field::Null}, {toValueField<long long>, fromValueField<long long>}},
-  {{Object::Field::DateTime, Object::Field::Null}, {toValueField<boost::posix_time::ptime>, fromValueField<boost::posix_time::ptime>}},
+  {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>, {}, deleter<Vector<int>> }},
+  {{Object::Field::Object, Object::Field::Null}, {toValueField<Object>, fromValueField<Object>, deleter<Object>}},
+  {{Object::Field::String, Object::Field::Null}, {toValueField<string>, fromValueField<string>, deleter<string>}},
+  {{Object::Field::Int, Object::Field::Null}, {toValueField<int>, fromValueField<int>, deleter<int>}},
+  {{Object::Field::LongLong, Object::Field::Null}, {toValueField<long long>, fromValueField<long long>, deleter<long long>}},
+  {{Object::Field::DateTime, Object::Field::Null}, {toValueField<boost::posix_time::ptime>, fromValueField<boost::posix_time::ptime>, deleter<boost::posix_time::ptime>}},
 };
 #endif
+
+
+Object::~Object()
+{
+  for(auto field: fields) {
+    mappings[field.type].deleter(field);
+  }
+}
+
 
 Wt::Json::Object Object::toWtObject() const {
     Wt::Json::Object wtObject;

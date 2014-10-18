@@ -35,9 +35,8 @@ public:
 class Object
 {
 public:
-  
+  virtual ~Object();
   struct Field {
-    // TODO: memory cleanup
       enum Types {Null = 0x0, String = 0x1, Int = 0x2, LongLong = 0x3, DateTime = 0x4, Object = 0x10, Vector = 0x20};
       void *p;
       struct Type {
