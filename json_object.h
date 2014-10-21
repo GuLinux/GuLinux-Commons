@@ -6,6 +6,8 @@
 #include <boost/date_time.hpp>
 #include <Wt/Json/Value>
 #include <Wt/Json/Object>
+#include <Wt/Json/Array>
+#include <Wt/Json/Serializer>
 #include <Wt/WDateTime>
 
 namespace Wt {
@@ -83,13 +85,22 @@ private:
     std::vector<Field> fields;
 };
 
-
+template<typename V, template<typename> class C>
 class Array {
 public:
-  template<typename V, template<typename> class C> Array(C<V> &c) : p(&c) {}
-  template<typename V, template<typename> class C> C<V> &get() const { return *reinterpret_cast<C<V>*>(p); }
+  Array(C<V> &c) : c(c) {}
+  Wt::Json::Array toWtArray() const {
+    Wt::Json::Array a;
+    std::copy(std::begin(c), std::end(c), back_inserter(a));
+    return a;
+  }
+  
+  std::string toJson() const {
+    return Wt::Json::serialize(toWtArray());
+  }
+  
 private:
-  void *p;
+  C<V> &c;
 };
 
 template<> class Object::Field::Builder<std::string> {
@@ -111,10 +122,6 @@ public:
 template<> class Object::Field::Builder<WtCommons::Json::Object> {
 public:
     static Object::Field asField(WtCommons::Json::Object &v) { return {&v, Object::Field::Object}; }
-};
-template<> class Object::Field::ContainerBuilder<int, Vector> {
-public:
-    static Object::Field asField(std::vector<int> &v) { return {&v, Object::Field::Vector, Object::Field::Int}; }
 };
 
 

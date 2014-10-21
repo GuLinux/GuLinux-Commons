@@ -96,6 +96,8 @@ BOOST_AUTO_TEST_CASE(TestUnixTimeAsPosixString) {
 
 }
 
+/*
+
 BOOST_AUTO_TEST_CASE(TestConstructionWithArray) {
     AnObjectWithAnArray<int> anObject;
     anObject._number = 4;
@@ -167,3 +169,11 @@ BOOST_AUTO_TEST_CASE(ParsingNestes) {
     BOOST_REQUIRE_EQUAL(5, anObject._anObject._number);
 }
 
+BOOST_AUTO_TEST_CASE(TestArray) {
+  std::vector<int> anArray {1, 2, 5, 69, 42 };
+  WtCommons::Json::Array<int, WtCommons::Json::Vector> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray)
+    expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
