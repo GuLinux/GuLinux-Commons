@@ -43,6 +43,7 @@ template<typename T> void deleter(const Object::Field &field) {
 }
 
 
+
 struct Mapping {
     typedef function<void(Wt::Json::Value &, const Object::Field&)> Exporter;
     typedef function<void(Wt::Json::Value &, const Object::Field&)> Importer;

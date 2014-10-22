@@ -65,16 +65,26 @@ public:
     }
   };
 
-    template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
-      return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
-    }
+//     template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
+//       return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
+//     }
 
     template<typename T> Object &addField(const std::string &name, T &f, Value<T> *converter = new Value<T>() ) {
+      auto &type = typeid(*converter);
+      static std::map<std::size_t, void *> convertersCache;
+      if(convertersCache.count(type.hash_code())) {
+	delete converter;
+	converter = reinterpret_cast<Value<T>*>(convertersCache.at(type.hash_code()));
+      } else {
+	convertersCache[type.hash_code()] = converter;
+      }
+      
+      std::cerr << "typeid for this converter: " << typeid(*converter).name() << ", hash: " << typeid(*converter).hash_code() << std::endl;
       return push_field(Field::Builder<T>::asField(f), name, reinterpret_cast<void*>(converter));
     }
     Object &push_field(Field field, const std::string &name, void *valueConverter) {
       field.label = name;
-      field.valueConverter = (valueConverter);
+      field.valueConverter = valueConverter;
       fields.push_back(field);
       return *this;
     }
