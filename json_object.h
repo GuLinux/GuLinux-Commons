@@ -65,9 +65,8 @@ public:
     }
   };
 
-//     template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
-//       return push_field(Field::ContainerBuilder<T, C>::asField(f), name, nullptr);
-//     }
+     template<typename T, template<typename> class C> Object &addField(const std::string &name, C<T> &f) {
+     }
 
     template<typename T> Object &addField(const std::string &name, T &f, Value<T> *converter = new Value<T>() ) {
       auto &type = typeid(*converter);
@@ -146,6 +145,7 @@ public:
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = boost::posix_time::from_iso_string(v.toString().orIfNull("")); }
 };
 
+
 template<class T, template<typename> class P> 
 class PointerObjectConverter : public WtCommons::Json::ValueBase<P<T>> {
 public:
@@ -154,6 +154,9 @@ public:
     }
     virtual void fromJson(void* p, const Wt::Json::Value& v) const {}
 };
+
+using ObjectValue = WtCommons::Json::Value<WtCommons::Json::Object>;
+
 
 template<typename V, template<typename> class C, class Cv = Value<V>>
 class Array {
