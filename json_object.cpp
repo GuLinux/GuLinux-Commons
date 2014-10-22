@@ -64,6 +64,7 @@ static map<Object::Field::Type, Mapping> mappings
   {{Object::Field::Object, Object::Field::Null}, {toValueField<Object>, fromValueField<Object>, deleter<Object>}},
   {{Object::Field::String, Object::Field::Null}, {toValueField<string>, fromValueField<string>, deleter<string>}},
   {{Object::Field::Int, Object::Field::Null}, {toValueField<int>, fromValueField<int>, deleter<int>}},
+  {{Object::Field::Double, Object::Field::Null}, {toValueField<double>, fromValueField<double>, deleter<double>}},
   {{Object::Field::LongLong, Object::Field::Null}, {toValueField<long long>, fromValueField<long long>, deleter<long long>}},
   {{Object::Field::DateTime, Object::Field::Null}, {toValueField<boost::posix_time::ptime>, fromValueField<boost::posix_time::ptime>, deleter<boost::posix_time::ptime>}},
 };
