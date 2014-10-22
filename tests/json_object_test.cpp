@@ -24,6 +24,7 @@ public:
     int _number;
 };
 
+/*
 template<typename T>
 class AnObjectWithAnArray : public WtCommons::Json::Object {
 public:
@@ -33,6 +34,8 @@ public:
     WtCommons::Json::Vector<T> anArray;
     int _number;
 };
+
+*/
 
 class AnotherObject : public WtCommons::Json::Object {
 public:
@@ -175,5 +178,24 @@ BOOST_AUTO_TEST_CASE(TestArray) {
   Wt::Json::Array expected;
   for(auto i: anArray)
     expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+
+using AnObjectConverter = WtCommons::Json::Value<WtCommons::Json::Object>;
+BOOST_AUTO_TEST_CASE(TestArrayOfObjects) {
+  std::vector<AnObject> anArray;
+  AnObject first(12, "first");
+  AnObject second(13, "second");
+  anArray.push_back(first);
+  anArray.push_back(second);
+  WtCommons::Json::Array<AnObject, WtCommons::Json::Vector, AnObjectConverter> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray) {
+    Wt::Json::Value v(Wt::Json::ObjectType);
+    Wt::Json::Object &o = v;
+    o = i.toWtObject();
+    expected.push_back(v);
+  }
   BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
 }

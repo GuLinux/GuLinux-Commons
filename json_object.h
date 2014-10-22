@@ -85,23 +85,6 @@ private:
     std::vector<Field> fields;
 };
 
-template<typename V, template<typename> class C>
-class Array {
-public:
-  Array(C<V> &c) : c(c) {}
-  Wt::Json::Array toWtArray() const {
-    Wt::Json::Array a;
-    std::copy(std::begin(c), std::end(c), back_inserter(a));
-    return a;
-  }
-  
-  std::string toJson() const {
-    return Wt::Json::serialize(toWtArray());
-  }
-  
-private:
-  C<V> &c;
-};
 
 template<> class Object::Field::Builder<std::string> {
 public:
@@ -151,6 +134,24 @@ class PosixTimeValue : public Value<boost::posix_time::ptime> {
 public:
   virtual Wt::Json::Value json(void *p) const { return {boost::posix_time::to_iso_string(value(p))}; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = boost::posix_time::from_iso_string(v.toString().orIfNull("")); }
+};
+
+template<typename V, template<typename> class C, class Cv = Value<V>>
+class Array {
+public:
+  Array(C<V> &c) : c(c) {}
+  Wt::Json::Array toWtArray() const {
+    Wt::Json::Array a;
+    std::transform(std::begin(c), std::end(c), back_inserter(a), [](V &v){ return Cv().json(&v); });
+    return a;
+  }
+  
+  std::string toJson() const {
+    return Wt::Json::serialize(toWtArray());
+  }
+  
+private:
+  C<V> &c;
 };
 
 } // namespace Json
