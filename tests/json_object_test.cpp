@@ -180,6 +180,17 @@ BOOST_AUTO_TEST_CASE(TestArray) {
     expected.push_back({i});
   BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
 }
+BOOST_AUTO_TEST_CASE(TestArraySyncronization) {
+  std::vector<int> anArray {1, 2, 5, 69, 42 };
+  WtCommons::Json::Array<int, WtCommons::Json::Vector> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray)
+    expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+  anArray.push_back(999);
+  expected.push_back(999);
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
 
 
 using AnObjectConverter = WtCommons::Json::Value<WtCommons::Json::Object>;

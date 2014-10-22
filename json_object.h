@@ -78,8 +78,6 @@ public:
       } else {
 	convertersCache[type.hash_code()] = converter;
       }
-      
-      std::cerr << "typeid for this converter: " << typeid(*converter).name() << ", hash: " << typeid(*converter).hash_code() << std::endl;
       return push_field(Field::Builder<T>::asField(f), name, reinterpret_cast<void*>(converter));
     }
     Object &push_field(Field field, const std::string &name, void *valueConverter) {
