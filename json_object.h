@@ -23,6 +23,8 @@ template<typename T> using Vector = std::vector<T>;
 
 template<typename T> class ValueBase {
 public:
+  virtual Wt::Json::Value json(const T &t) const = 0;
+  virtual Wt::Json::Value jsonP(void *p) { return json(value(p)); }
   virtual T& value(void *p) const { return convert_pointer(p); }
 protected:
   virtual T &convert_pointer(void *p) const { return *reinterpret_cast<T*>(p); }
@@ -30,7 +32,7 @@ protected:
 
 template<typename T> class Value : public ValueBase<T> {
 public:
-  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {ValueBase<T>::value(p)}; return v; }
+  virtual Wt::Json::Value json(const T &t) const { Wt::Json::Value v = {t}; return v; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { ValueBase<T>::convert_pointer(p) = v; }
 };
 
@@ -55,7 +57,7 @@ public:
       };
       
       template<typename T> T &value() const { return converter<T>()->value(p); }
-      template<typename T> Wt::Json::Value json() const { return converter<T>()->json(p); }
+      template<typename T> Wt::Json::Value json() const { return converter<T>()->jsonP(p); }
       template<typename T> void fromJson(const Wt::Json::Value &v) const { return converter<T>()->fromJson(p, v); }
     
     template<typename T> Value<T> *converter() const {
@@ -110,15 +112,15 @@ public:
 
 template<> class Value<std::string> : public ValueBase<std::string> {
 public:
-  virtual Wt::Json::Value json(void *p) const { Wt::Json::Value v = {Wt::WString::fromUTF8(value(p))}; return v; }
+  virtual Wt::Json::Value json(const std::string &s) const { Wt::Json::Value v = {Wt::WString::fromUTF8(s)}; return v; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = v.toString().orIfNull(""); }
 };
 template<> class Value<Object> : public ValueBase<Object> {
 public:
-  virtual Wt::Json::Value json(void *p) const { 
+  virtual Wt::Json::Value json(const Object &obj) const { 
     Wt::Json::Value v{Wt::Json::ObjectType};
     Wt::Json::Object &o = v;
-    o = value(p).toWtObject();
+    o = obj.toWtObject();
     return v;
   }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p).from(v); }
@@ -126,14 +128,23 @@ public:
 
 template<> class Value<boost::posix_time::ptime> : public ValueBase<boost::posix_time::ptime> {
 public:
-  virtual Wt::Json::Value json(void *p) const { return {static_cast<long long>(Wt::WDateTime::fromPosixTime(value(p)).toTime_t())}; }
+  virtual Wt::Json::Value json(const boost::posix_time::ptime &p) const { return {static_cast<long long>(Wt::WDateTime::fromPosixTime(p).toTime_t())}; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { long long timeT = v; convert_pointer(p) = boost::posix_time::from_time_t(timeT); }
 };
 
 class PosixTimeValue : public Value<boost::posix_time::ptime> {
 public:
-  virtual Wt::Json::Value json(void *p) const { return {boost::posix_time::to_iso_string(value(p))}; }
+  virtual Wt::Json::Value json(const boost::posix_time::ptime &p) const { return {boost::posix_time::to_iso_string(p)}; }
   virtual void fromJson(void *p, const Wt::Json::Value &v) const { convert_pointer(p) = boost::posix_time::from_iso_string(v.toString().orIfNull("")); }
+};
+
+template<class T, template<typename> class P> 
+class PointerObjectConverter : public WtCommons::Json::ValueBase<P<T>> {
+public:
+    virtual Wt::Json::Value json(const P<T>& t) const {
+      return WtCommons::Json::Value<WtCommons::Json::Object>().json(*t);
+    }
+    virtual void fromJson(void* p, const Wt::Json::Value& v) const {}
 };
 
 template<typename V, template<typename> class C, class Cv = Value<V>>
@@ -142,7 +153,7 @@ public:
   Array(C<V> &c) : c(c) {}
   Wt::Json::Array toWtArray() const {
     Wt::Json::Array a;
-    std::transform(std::begin(c), std::end(c), back_inserter(a), [](V &v){ return Cv().json(&v); });
+    std::transform(std::begin(c), std::end(c), back_inserter(a), [](V &v){ return Cv().json(v); });
     return a;
   }
   

@@ -199,3 +199,22 @@ BOOST_AUTO_TEST_CASE(TestArrayOfObjects) {
   }
   BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
 }
+
+using AnObjectPointerConverter = WtCommons::Json::PointerObjectConverter<AnObject, std::shared_ptr>;
+
+BOOST_AUTO_TEST_CASE(TestArrayOfObjectPointers) {
+  std::vector<std::shared_ptr<AnObject>> anArray;
+  auto first = make_shared<AnObject>(12, "first");
+  auto second = make_shared<AnObject>(13, "second");
+  anArray.push_back(first);
+  anArray.push_back(second);
+  WtCommons::Json::Array<std::shared_ptr<AnObject>, WtCommons::Json::Vector, AnObjectPointerConverter> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray) {
+    Wt::Json::Value v(Wt::Json::ObjectType);
+    Wt::Json::Object &o = v;
+    o = i->toWtObject();
+    expected.push_back(v);
+  }
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
