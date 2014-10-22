@@ -85,6 +85,7 @@ Wt::Json::Object Object::toWtObject() const {
         mappings[v.type].exporter(value, v);
         wtObject[v.label] = value;
     }
+    add_to_json(wtObject);
     return wtObject;
 }
 

@@ -85,6 +85,8 @@ public:
       fields.push_back(field);
       return *this;
     }
+    
+    virtual void add_to_json(Wt::Json::Object &object) const {}
 
     std::string toJson() const;
     void fromJson(const std::string &jsonString);
@@ -166,6 +168,13 @@ public:
     Wt::Json::Array a;
     std::transform(std::begin(c), std::end(c), back_inserter(a), [](V &v){ return Cv().json(v); });
     return a;
+  }
+  
+  Wt::Json::Value toWtValue() const {
+    Wt::Json::Value v(Wt::Json::ArrayType);
+    Wt::Json::Array &a = v;
+    a = toWtArray();
+    return v;
   }
   
   std::string toJson() const {
