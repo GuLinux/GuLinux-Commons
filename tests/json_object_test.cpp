@@ -24,18 +24,6 @@ public:
     int _number;
 };
 
-/*
-template<typename T>
-class AnObjectWithAnArray : public WtCommons::Json::Object {
-public:
-    AnObjectWithAnArray() {
-        addField<T, WtCommons::Json::Vector>("an-array", anArray).addField<int>("number", _number);
-    }
-    WtCommons::Json::Vector<T> anArray;
-    int _number;
-};
-
-*/
 
 class AnotherObject : public WtCommons::Json::Object {
 public:
@@ -180,6 +168,17 @@ BOOST_AUTO_TEST_CASE(TestArray) {
     expected.push_back({i});
   BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
 }
+BOOST_AUTO_TEST_CASE(TestArraySyncronization) {
+  std::vector<int> anArray {1, 2, 5, 69, 42 };
+  WtCommons::Json::Array<int, WtCommons::Json::Vector> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray)
+    expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+  anArray.push_back(999);
+  expected.push_back(999);
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
 
 
 using AnObjectConverter = WtCommons::Json::Value<WtCommons::Json::Object>;
@@ -198,4 +197,45 @@ BOOST_AUTO_TEST_CASE(TestArrayOfObjects) {
     expected.push_back(v);
   }
   BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+using AnObjectPointerConverter = WtCommons::Json::PointerObjectConverter<AnObject, std::shared_ptr>;
+
+BOOST_AUTO_TEST_CASE(TestArrayOfObjectPointers) {
+  std::vector<std::shared_ptr<AnObject>> anArray;
+  auto first = make_shared<AnObject>(12, "first");
+  auto second = make_shared<AnObject>(13, "second");
+  anArray.push_back(first);
+  anArray.push_back(second);
+  WtCommons::Json::Array<std::shared_ptr<AnObject>, WtCommons::Json::Vector, AnObjectPointerConverter> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray) {
+    Wt::Json::Value v(Wt::Json::ObjectType);
+    Wt::Json::Object &o = v;
+    o = i->toWtObject();
+    expected.push_back(v);
+  }
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+
+template<typename T>
+class AnObjectWithAnArray : public WtCommons::Json::Object {
+public:
+    AnObjectWithAnArray() {
+        addField<int>("number", _number);
+        addField<T, WtCommons::Json::Vector>("an-array", anArray);
+    }
+    WtCommons::Json::Vector<T> anArray;
+    int _number;
+};
+
+
+BOOST_AUTO_TEST_CASE(TestArrayOfObjectPointersInsideAnObject) {
+  auto first = make_shared<AnObject>(12, "first");
+  auto second = make_shared<AnObject>(13, "second");
+  AnObjectWithAnArray<std::shared_ptr<AnObject>> aComplexObject;
+  aComplexObject._number = 4;
+  aComplexObject.anArray.push_back(first);
+  aComplexObject.anArray.push_back(second);
 }
