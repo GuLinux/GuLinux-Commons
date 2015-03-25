@@ -24,15 +24,6 @@ public:
     int _number;
 };
 
-template<typename T>
-class AnObjectWithAnArray : public WtCommons::Json::Object {
-public:
-    AnObjectWithAnArray() {
-        addField<T, WtCommons::Json::Vector>("an-array", anArray).addField<int>("number", _number);
-    }
-    WtCommons::Json::Vector<T> anArray;
-    int _number;
-};
 
 class AnotherObject : public WtCommons::Json::Object {
 public:
@@ -47,6 +38,13 @@ public:
     AnObject _anObject;
 };
 
+BOOST_AUTO_TEST_CASE(TestFieldWithString) {
+   std::string foo("fuffa");
+   WtCommons::Json::Object::Field field;
+   field.p = &foo;
+   field.valueConverter = (new WtCommons::Json::Value<std::string>);
+   BOOST_REQUIRE_EQUAL(foo, field.value<std::string>());
+}
 BOOST_AUTO_TEST_CASE(TestConstruction) {
     AnObject anObject(5, "3");
 
@@ -55,6 +53,42 @@ BOOST_AUTO_TEST_CASE(TestConstruction) {
 
     BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), anObject.toJson());
 }
+
+BOOST_AUTO_TEST_CASE(TestUnixTime) {
+  struct TimeObject : public WtCommons::Json::Object {
+    TimeObject() { addField<boost::posix_time::ptime>("aTime", time); }
+    boost::posix_time::ptime time;
+  } timeObject;
+  timeObject.time = boost::posix_time::from_iso_string("20141012T123323");
+  Wt::Json::Object o;
+  Wt::Json::parse(R"({"aTime" : 1413117203 })", o);
+
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), timeObject.toJson());
+  
+  timeObject.time = {};
+  timeObject.fromJson(R"({"aTime" : 1413117203 })");
+  BOOST_REQUIRE_EQUAL(boost::posix_time::from_iso_string("20141012T123323"), timeObject.time);
+}
+
+BOOST_AUTO_TEST_CASE(TestUnixTimeAsPosixString) {
+  struct TimeObject : public WtCommons::Json::Object {
+    TimeObject() { addField<boost::posix_time::ptime>("aTime", time, new WtCommons::Json::PosixTimeValue); }
+    boost::posix_time::ptime time;
+  } timeObject;
+  timeObject.time = boost::posix_time::from_iso_string("20141012T123323");
+  Wt::Json::Object o;
+  Wt::Json::parse(R"({"aTime" : "20141012T123323" })", o);
+
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(o), timeObject.toJson());
+  
+  timeObject.time = {};
+  timeObject.fromJson(R"({"aTime" : "20141012T123323" })");
+  BOOST_REQUIRE_EQUAL(boost::posix_time::from_iso_string("20141012T123323"), timeObject.time);
+
+}
+
+/*
+
 BOOST_AUTO_TEST_CASE(TestConstructionWithArray) {
     AnObjectWithAnArray<int> anObject;
     anObject._number = 4;
@@ -126,3 +160,82 @@ BOOST_AUTO_TEST_CASE(ParsingNestes) {
     BOOST_REQUIRE_EQUAL(5, anObject._anObject._number);
 }
 
+BOOST_AUTO_TEST_CASE(TestArray) {
+  std::vector<int> anArray {1, 2, 5, 69, 42 };
+  WtCommons::Json::Array<int, WtCommons::Json::Vector> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray)
+    expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+BOOST_AUTO_TEST_CASE(TestArraySyncronization) {
+  std::vector<int> anArray {1, 2, 5, 69, 42 };
+  WtCommons::Json::Array<int, WtCommons::Json::Vector> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray)
+    expected.push_back({i});
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+  anArray.push_back(999);
+  expected.push_back(999);
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+
+using AnObjectConverter = WtCommons::Json::Value<WtCommons::Json::Object>;
+BOOST_AUTO_TEST_CASE(TestArrayOfObjects) {
+  std::vector<AnObject> anArray;
+  AnObject first(12, "first");
+  AnObject second(13, "second");
+  anArray.push_back(first);
+  anArray.push_back(second);
+  WtCommons::Json::Array<AnObject, WtCommons::Json::Vector, AnObjectConverter> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray) {
+    Wt::Json::Value v(Wt::Json::ObjectType);
+    Wt::Json::Object &o = v;
+    o = i.toWtObject();
+    expected.push_back(v);
+  }
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+using AnObjectPointerConverter = WtCommons::Json::PointerObjectConverter<AnObject, std::shared_ptr>;
+
+BOOST_AUTO_TEST_CASE(TestArrayOfObjectPointers) {
+  std::vector<std::shared_ptr<AnObject>> anArray;
+  auto first = make_shared<AnObject>(12, "first");
+  auto second = make_shared<AnObject>(13, "second");
+  anArray.push_back(first);
+  anArray.push_back(second);
+  WtCommons::Json::Array<std::shared_ptr<AnObject>, WtCommons::Json::Vector, AnObjectPointerConverter> a(anArray);
+  Wt::Json::Array expected;
+  for(auto i: anArray) {
+    Wt::Json::Value v(Wt::Json::ObjectType);
+    Wt::Json::Object &o = v;
+    o = i->toWtObject();
+    expected.push_back(v);
+  }
+  BOOST_REQUIRE_EQUAL(Wt::Json::serialize(expected), a.toJson());
+}
+
+
+template<typename T>
+class AnObjectWithAnArray : public WtCommons::Json::Object {
+public:
+    AnObjectWithAnArray() {
+        addField<int>("number", _number);
+        addField<T, WtCommons::Json::Vector>("an-array", anArray);
+    }
+    WtCommons::Json::Vector<T> anArray;
+    int _number;
+};
+
+
+BOOST_AUTO_TEST_CASE(TestArrayOfObjectPointersInsideAnObject) {
+  auto first = make_shared<AnObject>(12, "first");
+  auto second = make_shared<AnObject>(13, "second");
+  AnObjectWithAnArray<std::shared_ptr<AnObject>> aComplexObject;
+  aComplexObject._number = 4;
+  aComplexObject.anArray.push_back(first);
+  aComplexObject.anArray.push_back(second);
+}

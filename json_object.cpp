@@ -8,93 +8,50 @@ using namespace std;
 
 namespace WtCommons {
 namespace Json {
-template<typename T> class Value {
-public:
-    Value(void *p) : v(*reinterpret_cast<T*>(p)) {}
-    operator T&() const { return v;}
-    operator Wt::Json::Value() const { return {v}; }
-    void set(const Wt::Json::Value &t) { v = t; }
-private:
-    T &v;
-};
-
 template<typename V, template<typename> class C> class Container {
 public:
     Container(void *p) : v(*reinterpret_cast<C<V>*>(p)) {}
     operator C<V>&() const { return v;}
-    operator Wt::Json::Value() const { return {v}; }
     void set(const Wt::Json::Value &t) { /* TODO */ }
 private:
     C<V> &v;
 };
 
-template<typename T> using Vector = vector<T>;
-
-template<> class Value<boost::posix_time::ptime> {
-public:
-    Value(void *p) : v(*reinterpret_cast<boost::posix_time::ptime*>(p)) {}
-    operator boost::posix_time::ptime&() const { return v;}
-    operator Wt::Json::Value() const { return {boost::posix_time::to_iso_string(v)}; }
-    void set(const Wt::Json::Value &t) { v = boost::posix_time::from_iso_string(t); }
-private:
-    boost::posix_time::ptime &v;
-};
-template<> class Value<string> {
-public:
-    Value(void *p) : v(*reinterpret_cast<string*>(p)) {}
-    operator string&() const { return v;}
-    operator Wt::Json::Value() const { return {v}; }
-    void set(const Wt::Json::Value &t) { v = t.toString().orIfNull(""); }
-private:
-    string &v;
-};
-
-template<> class Value<Object> {
-public:
-    Value(void *p) : v(*reinterpret_cast<Object*>(p)) {}
-    operator Object&() const { return v;}
-    operator Wt::Json::Value() const {
-        Wt::Json::Value another(Wt::Json::ObjectType);
-        Wt::Json::Object &o = another;
-        o = {this->v.toWtObject()};
-        return another;
-    }
-    void set(const Wt::Json::Value &t) {v.from(t); }
-private:
-    Object &v;
-
-};
-
-
 string Object::toJson() const {
     return Wt::Json::serialize(toWtObject() );
 }
 
-
-
-template<typename T> void toValue(Wt::Json::Value &v, void *p) {
-    v = Value<T>(p);
+template<typename T> void toValueField(Wt::Json::Value &v, const Object::Field &field) {
+    v = field.json<T>();
 }
 
-template<typename T> void fromValue(Wt::Json::Value &v, void *p) {
-  Value<T>(p).set(v);
+template<typename T> void fromValueField(Wt::Json::Value &v, const Object::Field &field) {
+  field.fromJson<T>(v);
 }
 
-template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, void *p) {
+template<typename V, template<typename> class C> void toContainer(Wt::Json::Value &v, const Object::Field &field) {
     Wt::Json::Value _v(Wt::Json::ArrayType);
     Wt::Json::Array &a = _v;
-    C<V>  _container = Container<V, C>{p};
+    C<V>  _container = Container<V, C>{field.p};
     std::copy(begin(_container), end(_container), back_inserter(a));
     v = _v;
 }
 
+template<typename T> void deleter(const Object::Field &field) {
+  // cout << "Deleting with type: " << typeid(T).name() << endl;
+  //delete field.converter<T>(); // TODO
+}
+
+
 
 struct Mapping {
-    typedef function<void(Wt::Json::Value &, void *)> Exporter;
-    typedef function<void(Wt::Json::Value &, void *)> Importer;
+    typedef function<void(Wt::Json::Value &, const Object::Field&)> Exporter;
+    typedef function<void(Wt::Json::Value &, const Object::Field&)> Importer;
+    typedef function<void(const Object::Field&)> Deleter;
 
     Exporter exporter;
     Importer importer;
+    Deleter deleter;
 };
 
 
@@ -103,22 +60,33 @@ static map<Object::Field::Type, Mapping> mappings;
 #else
 static map<Object::Field::Type, Mapping> mappings
 {
-  {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>}},
-  {{Object::Field::Object, Object::Field::Null}, {toValue<Object>, fromValue<Object>}},
-  {{Object::Field::String, Object::Field::Null}, {toValue<string>, fromValue<string>}},
-  {{Object::Field::Int, Object::Field::Null}, {toValue<int>, fromValue<int>}},
-  {{Object::Field::LongLong, Object::Field::Null}, {toValue<long long>, fromValue<long long>}},
-  {{Object::Field::DateTime, Object::Field::Null}, {toValue<boost::posix_time::ptime>, fromValue<boost::posix_time::ptime>}},
+  {{Object::Field::Vector, Object::Field::Int}, {toContainer<int, Vector>, {}, deleter<Vector<int>> }},
+  {{Object::Field::Object, Object::Field::Null}, {toValueField<Object>, fromValueField<Object>, deleter<Object>}},
+  {{Object::Field::String, Object::Field::Null}, {toValueField<string>, fromValueField<string>, deleter<string>}},
+  {{Object::Field::Int, Object::Field::Null}, {toValueField<int>, fromValueField<int>, deleter<int>}},
+  {{Object::Field::Double, Object::Field::Null}, {toValueField<double>, fromValueField<double>, deleter<double>}},
+  {{Object::Field::LongLong, Object::Field::Null}, {toValueField<long long>, fromValueField<long long>, deleter<long long>}},
+  {{Object::Field::DateTime, Object::Field::Null}, {toValueField<boost::posix_time::ptime>, fromValueField<boost::posix_time::ptime>, deleter<boost::posix_time::ptime>}},
 };
 #endif
+
+
+Object::~Object()
+{
+  for(auto field: fields) {
+    mappings[field.type].deleter(field);
+  }
+}
+
 
 Wt::Json::Object Object::toWtObject() const {
     Wt::Json::Object wtObject;
     for(auto v: fields) {
         Wt::Json::Value value;
-        mappings[v.type].exporter(value, v.p);
+        mappings[v.type].exporter(value, v);
         wtObject[v.label] = value;
     }
+    add_to_json(wtObject);
     return wtObject;
 }
 
@@ -132,7 +100,7 @@ void Object::fromJson(const std::string &jsonString) {
 void Object::from(const Wt::Json::Object &object) {
     for(auto field: fields) {
         auto value = object.at(field.label);
-        mappings[field.type].importer(value, field.p);
+        mappings[field.type].importer(value, field);
     }
 }
 
