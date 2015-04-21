@@ -148,4 +148,4 @@ IF( Wt_INCLUDE_DIR )
 
 ENDIF( Wt_INCLUDE_DIR )
 
-set(Wt_DEPENDENCIES "" CACHE STRING "Wt dependencies, useful for static linking" PARENT_SCOPE)
+set(Wt_STATIC_DEPENDENCIES "" CACHE STRING "Wt static external dependencies, useful for static linking")
