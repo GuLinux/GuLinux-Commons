@@ -146,6 +146,8 @@ IF( Wt_INCLUDE_DIR )
                 ENDIF(Wt_FIND_REQUIRED_Debug)
         ENDIF(Wt_DEBUG_FOUND)
 
+  get_filename_component(Wt_ROOT_DIR ${Wt_INCLUDE_DIR} DIRECTORY)
+  set(Wt_SHARED_DIR "${Wt_ROOT_DIR}/share/Wt" CACHE STRING "Wt static external dependencies, useful for static linking")
+  set(Wt_STATIC_DEPENDENCIES "" CACHE STRING "Wt static external dependencies, useful for static linking")
 ENDIF( Wt_INCLUDE_DIR )
 
-set(Wt_STATIC_DEPENDENCIES "" CACHE STRING "Wt static external dependencies, useful for static linking")
