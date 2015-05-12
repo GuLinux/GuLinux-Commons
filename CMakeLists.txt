@@ -4,6 +4,8 @@ set(Wt_Commons_Library_SRCS
   quitresource.cpp 
   wform.cpp 
   wglyphicon.cpp 
+  whtmltxt.cpp
+  wtr.cpp
   whtmltemplateslocalizedstrings.cpp
 )
 set(HAVE_WT_JSON_SERIALIZE Off CACHE BOOL "Build with Wt JSON serialize support (Default: Off)")
