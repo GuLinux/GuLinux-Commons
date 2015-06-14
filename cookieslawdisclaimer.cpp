@@ -25,6 +25,7 @@
 #include <Wt/WPushButton>
 #include <Wt/WDialog>
 #include <Wt/WMessageBox>
+#include "wt_helpers.h"
 
 using namespace Wt;
 using namespace WtCommons;
@@ -58,7 +59,13 @@ CookiesLawDisclaimer::CookiesLawDisclaimer(WContainerWidget* parent, const std::
   auto readMoreButton = new WPushButton(WString::tr("cookies_law_readmore"), content);
   readMoreButton->setStyleClass("btn-link");
   readMoreButton->clicked().connect([=](const WMouseEvent &){
-    WMessageBox::show(WString::tr("cookies_law_readmore_caption"), WString::tr("cookies_law_readmore_text"), Wt::Ok);
+    WMessageBox *messageBox = new WMessageBox(WString::tr("cookies_law_readmore_caption"), WString::tr("cookies_law_readmore_text"), Information, Ok, this);
+    messageBox->contents()->setOverflow(WContainerWidget::OverflowAuto);
+    messageBox->setHeight(500);
+    messageBox->buttonClicked().connect([=](StandardButton, _n5){
+      delete messageBox;
+    });
+    messageBox->show();
   });
   auto agreeButton = new WPushButton(WString::tr("cookies_law_agree"), content);
   agreeButton->setStyleClass("btn-link");
