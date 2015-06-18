@@ -26,6 +26,7 @@
 #include <Wt/WDialog>
 #include <Wt/WMessageBox>
 #include "wt_helpers.h"
+#include "wt_utils.h"
 
 using namespace Wt;
 using namespace WtCommons;
@@ -55,11 +56,11 @@ CookiesLawDisclaimer::CookiesLawDisclaimer(WContainerWidget* parent, const std::
 {
   WContainerWidget *content = new WContainerWidget;
   content->addStyleClass("alert alert-danger");
-  content->addWidget(new WText(WString::tr("cookies_law_disclaimer")));
-  auto readMoreButton = new WPushButton(WString::tr("cookies_law_readmore"), content);
+  content->addWidget(new WText("cookies_law_disclaimer"_wtr));
+  auto readMoreButton = new WPushButton("cookies_law_readmore"_wtr, content);
   readMoreButton->setStyleClass("btn-link");
   readMoreButton->clicked().connect([=](const WMouseEvent &){
-    WMessageBox *messageBox = new WMessageBox(WString::tr("cookies_law_readmore_caption"), WString::tr("cookies_law_readmore_text"), Information, Ok, this);
+    WMessageBox *messageBox = new WMessageBox("cookies_law_readmore_caption"_wtr, "cookies_law_readmore_text"_wtr, Information, Ok, this);
     messageBox->contents()->setOverflow(WContainerWidget::OverflowAuto);
     messageBox->setHeight(500);
     messageBox->buttonClicked().connect([=](StandardButton, _n5){
@@ -67,7 +68,7 @@ CookiesLawDisclaimer::CookiesLawDisclaimer(WContainerWidget* parent, const std::
     });
     messageBox->show();
   });
-  auto agreeButton = new WPushButton(WString::tr("cookies_law_agree"), content);
+  auto agreeButton = new WPushButton("cookies_law_agree"_wtr, content);
   agreeButton->setStyleClass("btn-link");
   agreeButton->clicked().connect([=](const WMouseEvent&){
     wApp->setCookie(COOKIES_LAW_COOKIE_NAME, COOKIES_LAW_COOKIE_VALUE, 60 * 60 * 24 * 365);
