@@ -4,7 +4,7 @@
 #include <boost/format.hpp>
 
 template<typename T>
-inline Wt::WString operator%(Wt::WString s, const T &t) {
+inline Wt::WString operator|(Wt::WString s, const T &t) {
   return s.arg(t);
 }
 
@@ -24,8 +24,7 @@ private:
 #ifdef IN_IDE_PARSER
 #define _ws +WString()
 #define _wtr +WString()
-#define _fmt +std::string()
-#define _wfmt +WString()
+#define _s +std::string()
 #else
 inline Wt::WString operator ""_ws(const char *s, std::size_t) {
   return {s};
@@ -34,11 +33,18 @@ inline Wt::WString operator ""_wtr(const char *s, std::size_t) {
   return Wt::WString::tr(s);
 }
 
-inline WtCommons::format<std::string> operator ""_fmt(const char *s, std::size_t) {
-  return {{s}};
+inline std::string operator ""_s(const char *s, std::size_t l) {
+  return {s, l};
 }
-inline WtCommons::format<Wt::WString> operator ""_wfmt(const char *s, std::size_t) {
-  return {{s}};
+
+template<typename T>
+inline WtCommons::format<std::string> operator%(const std::string &s, const T &t) {
+  return WtCommons::format<std::string>{s} % t;
+}
+
+template<typename T>
+inline WtCommons::format<Wt::WString> operator%(const Wt::WString &s, const T &t) {
+  return WtCommons::format<Wt::WString>{s.toUTF8()} % t;
 }
 #endif
 #endif

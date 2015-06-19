@@ -23,15 +23,15 @@ BOOST_AUTO_TEST_CASE(TestLiteralTranslation) {
 }
 
 BOOST_AUTO_TEST_CASE(TestWStringArgs) {
-  BOOST_REQUIRE_EQUAL( "string with {1} {2} {3} {4}"_ws % 1 % 22 % 55 % "abc", "string with 1 22 55 abc");
+  BOOST_REQUIRE_EQUAL( "string with {1} {2} {3} {4}"_ws | 1 | 22 | 55 | "abc", "string with 1 22 55 abc");
 }
 
 BOOST_AUTO_TEST_CASE(TestStringFormatter) {
-  std::string actual = "string with %d %s"_fmt % 1 % "abc";
+  std::string actual = "string with %d %s"_s % 1 % "abc";
   BOOST_REQUIRE_EQUAL(actual, std::string{"string with 1 abc"});
 }
 
 BOOST_AUTO_TEST_CASE(TestWStringFormatter) {
-  Wt::WString actual = "string with %d %s"_wfmt % 1 % "abc";
+  Wt::WString actual = "string with %d %s"_ws % 1 % "abc";
   BOOST_REQUIRE_EQUAL(actual, Wt::WString{"string with 1 abc"});
 }
