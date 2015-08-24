@@ -16,5 +16,6 @@ if(HAVE_WT_JSON_SERIALIZE)
     json_object.cpp 
   )
 endif(HAVE_WT_JSON_SERIALIZE)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_library(Wt_Commons_Library STATIC ${Wt_Commons_Library_SRCS})
 add_subdirectory(tests)
