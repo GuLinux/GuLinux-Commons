@@ -5,7 +5,7 @@
 #define BOOST_CHECK_WITH_ARGS_IMPL(...) (void) __VA_ARGS__
 #endif // IN_IDE_PARSER
 
-#include "Wt-Commons/wt_utils.h"
+#include "wt_utils.h"
 
 using namespace std;
 

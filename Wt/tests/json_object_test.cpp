@@ -4,7 +4,7 @@
 #define BOOST_CHECK_WITH_ARGS_IMPL(...) (void) __VA_ARGS__
 #endif // IN_IDE_PARSER
 
-#include "Wt-Commons/json_object.h"
+#include "json_object.h"
 
 #include <Wt/Json/Object>
 #include <Wt/Json/Serializer>
