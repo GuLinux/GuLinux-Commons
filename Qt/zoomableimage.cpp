@@ -176,3 +176,9 @@ void ZoomableImage::resizeEvent(QResizeEvent* e)
     fitToWindow();
   QWidget::resizeEvent(e);
 }
+
+QGraphicsScene* ZoomableImage::scene() const
+{
+  return &d->scene;
+}
+

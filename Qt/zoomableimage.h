@@ -24,6 +24,8 @@
 #include <QRect>
 #include <memory>
 #include "dptr.h"
+
+class QGraphicsScene;
 class QLabel;
 class QImage;
 class QRubberBand;
@@ -35,6 +37,7 @@ public:
     ~ZoomableImage();
     ZoomableImage(bool embed_toolbar = true, QWidget* parent = 0);
     QRect roi() const;
+    QGraphicsScene *scene() const;
 public slots:
   void setImage(const QImage &image);
   void scale(double factor);
