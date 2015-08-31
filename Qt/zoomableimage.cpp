@@ -73,6 +73,7 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
   setLayout(new QGridLayout(this));
   layout()->setSpacing(0);
   d->toolbar = new QToolBar(tr("Image Controls"));
+  d->toolbar->setObjectName("zoomable-image-controls");
   if(embed_toolbar)
     layout()->addWidget(d->toolbar);
   connect(d->toolbar->addAction(QIcon::fromTheme("zoom-in"), tr("Zoom In")), &QAction::triggered, bind(&ZoomableImage::scale, this, 1.2));
