@@ -1,6 +1,6 @@
 #ifndef QT_COMMONS_FUNCTIONAL_H
 #define QT_COMMONS_FUNCTIONAL_H
-
+#include <QTimer>
 #define F_PTR(class, name, ...) static_cast<void (class::*)(__VA_ARGS__)>(&class::name)
 
 inline void timedLambda(int msec, std::function<void()> f, QObject *context) {
