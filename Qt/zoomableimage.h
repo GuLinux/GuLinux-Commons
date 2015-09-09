@@ -34,10 +34,13 @@ class ZoomableImage : public QWidget
 {
 Q_OBJECT
 public:
-    ~ZoomableImage();
-    ZoomableImage(bool embed_toolbar = true, QWidget* parent = 0);
-    QRect roi() const;
-    QGraphicsScene *scene() const;
+   ~ZoomableImage();
+   ZoomableImage(bool embed_toolbar = true, QWidget* parent = 0);
+   QRect roi() const;
+   QGraphicsScene *scene() const;
+  QToolBar *toolbar() const;
+  enum Actions {ZoomIn, ZoomOut, ZoomFit, ZoomRealSize};
+  QMap<Actions, QAction*> actions() const;
 public slots:
   void setImage(const QImage &image);
   void scale(double factor);
@@ -45,7 +48,6 @@ public slots:
   void normalSize();
   void startSelectionMode();
   void clearROI();
-  QToolBar *toolbar() const;
 protected:
     virtual void resizeEvent(QResizeEvent * e);
 private:

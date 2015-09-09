@@ -54,8 +54,8 @@ public:
   ZoomableImage *q;
   QGraphicsScene scene;
   QRect imageSize;
-    QToolBar* toolbar;
-  
+  QToolBar* toolbar;
+  QMap<Actions, QAction*> actions;
 };
 
 ZoomableImage::Private::GraphicsView::GraphicsView(QWidget* parent) : QGraphicsView(parent)
@@ -76,11 +76,16 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
   d->toolbar->setObjectName("zoomable-image-controls");
   if(embed_toolbar)
     layout()->addWidget(d->toolbar);
-  connect(d->toolbar->addAction(QIcon::fromTheme("zoom-in"), tr("Zoom In")), &QAction::triggered, bind(&ZoomableImage::scale, this, 1.2));
-  connect(d->toolbar->addAction(QIcon::fromTheme("zoom-out"), tr("Zoom Out")), &QAction::triggered, bind(&ZoomableImage::scale, this, 0.8));
+  auto zoomInAction = d->toolbar->addAction(QIcon::fromTheme("zoom-in"), tr("Zoom In"));
+  auto zoomOutAction =d->toolbar->addAction(QIcon::fromTheme("zoom-out"), tr("Zoom Out"));
+  auto zoomBestFitAction = d->toolbar->addAction(QIcon::fromTheme("zoom-fit-best"), tr("Fit Window"));
+  auto zoomOriginalAction =d->toolbar->addAction(QIcon::fromTheme("zoom-original"), tr("Original Size"));
+  d->actions = {{ZoomIn, zoomInAction}, {ZoomOut, zoomOutAction}, {ZoomFit, zoomBestFitAction}, {ZoomRealSize, zoomOriginalAction}};
+  connect(zoomInAction, &QAction::triggered, bind(&ZoomableImage::scale, this, 1.2));
+  connect(zoomOutAction, &QAction::triggered, bind(&ZoomableImage::scale, this, 0.8));
   d->toolbar->addSeparator();
-  connect(d->toolbar->addAction(QIcon::fromTheme("zoom-fit-best"), tr("Fit Window")), &QAction::triggered, bind(&ZoomableImage::fitToWindow, this));
-  connect(d->toolbar->addAction(QIcon::fromTheme("zoom-original"), tr("Original Size")), &QAction::triggered, bind(&ZoomableImage::normalSize, this));
+  connect(zoomBestFitAction, &QAction::triggered, bind(&ZoomableImage::fitToWindow, this));
+  connect(zoomOriginalAction, &QAction::triggered, bind(&ZoomableImage::normalSize, this));
   d->toolbar->setEnabled(false);
   layout()->addWidget(d->view = new Private::GraphicsView(this));
   d->view->setScene(&d->scene);
@@ -183,3 +188,8 @@ QGraphicsScene* ZoomableImage::scene() const
   return &d->scene;
 }
 
+
+QMap< ZoomableImage::Actions, QAction* > ZoomableImage::actions() const
+{
+  return d->actions;
+}
