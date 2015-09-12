@@ -1,0 +1,5 @@
+find_package(Qt5Test REQUIRED )
+include_directories(${Qt5Test_INCLUDE_DIRECTORIES})
+add_executable(thread_testing thread_testing.cpp ../functional.cpp)
+target_link_libraries(thread_testing Qt5::Test)
+add_test(thread_testing thread_testing)
