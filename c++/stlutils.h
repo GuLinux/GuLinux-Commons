@@ -19,8 +19,10 @@ private:
   std::function<void()> onExit;
 };
 
-
-
+template<typename T>
+void foreach_point(T x, T y, std::function<void(T, T)> onEach) {
+  for(T _y=0; _y<y; _y++) for(T _x=0; _x < x; _x++) onEach(_x, _y);
+}
 
 class benchmark {
 public:
@@ -47,7 +49,7 @@ private:
   std::chrono::steady_clock::time_point started;
 };
 #define CUR_POS std::string{__FUNCTION__} + " " + std::string{__FILE__} + " "
-#define benchmark_scope(name) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr )};
+#define benchmark_scope(name, ...) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr ), __VA_ARGS__};
 #define benchmark_start(name) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr )};
 #define benchmark_end(name) delete name;
 
