@@ -37,8 +37,8 @@ public:
     }
   }
   template<typename T>
-  static BenchmarkCall benchmark_stream(T &stream) { 
-    return [&](const std::string &name, int elements, double elapsed){ stream << "benchmark " << __FUNCTION__ << "@" << __FILE__ << ":" << __LINE__ << ": " << name << " (avg): " << std::fixed << std::setprecision(6) << elapsed*1000. << " ms" << std::endl; };
+  static BenchmarkCall benchmark_stream(T &stream, const std::string &prefix = {}) { 
+    return [&](const std::string &name, int elements, double elapsed){ stream << "benchmark " << prefix << name << " (avg): " << std::fixed << std::setprecision(6) << elapsed*1000. << " ms" << std::endl; };
   }
 private:
   const std::string name;
@@ -46,8 +46,9 @@ private:
   BenchmarkCall benchmark_f;
   std::chrono::steady_clock::time_point started;
 };
-#define benchmark_scope(name) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr)};
-#define benchmark_start(name) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr)};
+#define CUR_POS std::string{__FUNCTION__} + " " + std::string{__FILE__} + " "
+#define benchmark_scope(name) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr )};
+#define benchmark_start(name) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr )};
 #define benchmark_end(name) delete name;
 
 }
