@@ -45,14 +45,14 @@ QLambdaEvent::~QLambdaEvent()
     d->after_processed();
 }
 
-QLambdaEvent::QLambdaEvent(const function<void()>& process_event, const function< void()> &after_processed): QEvent(type)
+QLambdaEvent::QLambdaEvent(const function<void()>& process_event, const function< void()> &after_processed): QEvent(type), dptr(process_event, after_processed, this)
 {
 }
 
-void QLambdaEvent::accept()
+
+void QLambdaEvent::run()
 {
   if(d->process_event)
     d->process_event();
   QEvent::accept();
 }
-

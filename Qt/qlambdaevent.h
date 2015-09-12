@@ -30,7 +30,7 @@ public:
     ~QLambdaEvent();
     QLambdaEvent(const std::function<void()> &process_event, const std::function<void()> &after_processed = [=]{});
     static QEvent::Type type;
-    void accept();
+    void run();
 private:
   D_PTR
 };
