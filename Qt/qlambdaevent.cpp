@@ -49,9 +49,10 @@ QLambdaEvent::QLambdaEvent(const function<void()>& process_event, const function
 {
 }
 
-void QLambdaEvent::run() const
+void QLambdaEvent::accept()
 {
   if(d->process_event)
     d->process_event();
+  QEvent::accept();
 }
 
