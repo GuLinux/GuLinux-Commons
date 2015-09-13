@@ -54,5 +54,5 @@ void QLambdaEvent::run()
 {
   if(d->process_event)
     d->process_event();
-  QEvent::accept();
+  accept();
 }
