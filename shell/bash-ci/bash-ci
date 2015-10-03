@@ -12,12 +12,11 @@ usage() {
 }
 
 CMD_PREFIX="${CMD_PREFIX:-bash}"
-WWW_DIR="${WWW_DIR:-/var/www/${APPNAME}}"
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
 
 project_basedir() {
-  echo "${PROJECTS_DIR}/${project_name}"
+  echo "${PROJECTS_DIR}/${PROJECT_NAME}"
 }
 
 project_workdir() {
@@ -26,6 +25,14 @@ project_workdir() {
 
 project_buildfile() {
   echo "$( project_basedir )/build.sh"
+}
+
+project_buildingfile() {
+  echo "$( project_basedir )/building"
+}
+
+project_lastbuild() {
+  echo "$( project_workdir)/last_build"
 }
 
 project_repodir() {
@@ -48,14 +55,14 @@ git_update_repo_command() {
 
 
 add_project() {
-  project_name="$1"
+  PROJECT_NAME="$1"
   repo_type="$2"
   repo_url="$3"
   [ -z "$repo_url" ] && usage "add_project repo_name repo_type repo_url (repo type currently supported: git)"
   mkdir -p "$( project_workdir )"
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
-PROJECT_NAME="$project_name"
+PROJECT_NAME="$PROJECT_NAME"
 PROJECT_DESCRIPTION=""
 PROJECT_DIR="$( project_workdir )"
 REPO_DIR="$( project_repodir )"
@@ -65,7 +72,7 @@ EOF
 
 . "$( projectfile )"
 
-## $project_name build file. Tweak it and add build options to make it automatically run.
+## $PROJECT_NAME build file. Tweak it and add build options to make it automatically run.
 ## Available environment variables: PROJECTS_DIR PROJECT_NAME PROJECT_DESCRIPTION REPO_DIR
 ## You can also parse arguments in "\$@" before starting any build, for instance to set a working branch.
 
@@ -95,9 +102,10 @@ EOF
 }
 
 build_project() {
-  project_name="$1"; shift
+  PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" 
-  touch "$( project_workdir)/building"
+  touch "$( project_buildingfile)"
+  echo "{\"status_name\":\"building\"}" > "$( project_lastbuild)"
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" >&2
     "$fname" || exit 1
@@ -106,13 +114,13 @@ build_project() {
   [[ "${status_code}" == 0 ]] && build_status="success" || build_status="failure"
   echo "$(date -Is) - Build finished: $build_status ($status_code)" >&2
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
-  rm -f "$( project_workdir)/building"
-  echo "$status_code|$build_status" > "$( project_workdir)/last_build"
+  rm -f "$( project_buildingfile)"
+  echo "{\"exit_status\":$status_code,\"status_name\":\"$build_status\"}" > "$( project_lastbuild)"
   exit "${status_code}"
 }
 
 trigger_build() {
-  project_name="$1"
+  PROJECT_NAME="$1"
   build_id="$( date -Is )"
 
   logfile="$( project_workdir )/build-${build_id}.log"
@@ -120,5 +128,69 @@ trigger_build() {
   rm -f "$( project_workdir )/build.log"; ln -s "$logfile" "$( project_workdir )/build.log"
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
+
+
+[[ -r "$PROJECTS_DIR/index.html" ]] || cat > "$PROJECTS_DIR/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Bash Continuous Integration Server Panel</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <nav class="navbar navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Bash Continuous Integration</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container projects">
+    </div><!-- /.container -->
+  </body>
+  <script>
+    var add_project = function(project) {
+      \$(".projects").append("<div class='row'><div class='col-md-4'>" + project.name + "</div><div class='col-md-7'>" + project.description + "</div><div class='col-md-1' id='" + project.name + "_build_status'>-</div></div>");
+      jQuery.getJSON( project.name + "/work/last_build", function(status){
+      console.log(status);
+        \$('#' + project.name + '_build_status').text=status.status_name;
+      console.log(\$('#' + project.name + '_build_status'));
+      });
+    }
+    jQuery.getJSON("projects.json", function(projects){
+        for(var i=0; i<projects.length; i++){
+            add_project(projects[i]);
+        }
+    });
+  </script>
+</html>
+EOF
+
+sep=""
+echo -en "[" > "$PROJECTS_DIR/projects.json"
+find "$PROJECTS_DIR" -name "bashci-project" | while read fname; do
+  . "$fname"
+  echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_DIR/projects.json"
+  sep=","
+done
+echo -en "]" >> "$PROJECTS_DIR/projects.json"
 
 if [[ -n "$1" && "$( type -t "$1" )" == "function" ]]; then "$@"; else usage; fi
