@@ -30,18 +30,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using namespace Wt;
 using namespace std;
 using namespace WtCommons;
-using namespace WtCommonsPrivate;
 
-CompositeResourcePrivate::CompositeResourcePrivate(CompositeResource* q) : q(q)
+CompositeResource::Private::Private(CompositeResource* q) : q(q)
 {
 }
-CompositeResourcePrivate::~CompositeResourcePrivate()
+CompositeResource::Private::~Private()
 {
 }
 
 CompositeResource::~CompositeResource()
 {
-    delete d;
 }
 
 CompositeResource* CompositeResource::add(string pathInfo, WResource* resource)
@@ -63,6 +61,6 @@ void CompositeResource::handleRequest(const Http::Request& request, Http::Respon
 }
 
 CompositeResource::CompositeResource(WObject* parent)
-   : WResource(parent), d(new CompositeResourcePrivate(this))
+   : WResource(parent), dptr(this)
 {
 }

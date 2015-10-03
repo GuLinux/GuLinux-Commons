@@ -27,20 +27,18 @@
 using namespace std;
 using namespace Wt;
 using namespace WtCommons;
-using namespace WtCommonsPrivate;
 
-QuitResourcePrivate::QuitResourcePrivate(std::string password, ShutdownCondition condition, QuitResource* q)
+QuitResource::Private::Private(std::string password, ShutdownCondition condition, QuitResource* q)
   : password(password), condition(condition), q(q)
 {
 }
 
-QuitResourcePrivate::~QuitResourcePrivate()
+QuitResource::Private::~Private()
 {
 }
 
 QuitResource::~QuitResource()
 {
-    delete d;
 }
 
 void QuitResource::handleRequest(const Wt::Http::Request& request, Wt::Http::Response& response)
@@ -60,22 +58,22 @@ void QuitResource::handleRequest(const Wt::Http::Request& request, Wt::Http::Res
 
   auto action = request.getParameter("action");
   if(action && *action == "status") {
-      static map<QuitResourcePrivate::Status, string> statuses {
-        {QuitResourcePrivate::Idle, "Idle"},
-        {QuitResourcePrivate::WaitShutdown, "Waiting for Shutdown"},
-        {QuitResourcePrivate::ShutDown, "Shutting down"},
+      static map<Private::Status, string> statuses {
+        {Private::Idle, "Idle"},
+        {Private::WaitShutdown, "Waiting for Shutdown"},
+        {Private::ShutDown, "Shutting down"},
       };
       response.setStatus(200);
       response.out() << "Status: " << statuses[d->status];
       return;
   }
 
-  d->status = QuitResourcePrivate::WaitShutdown;
+  d->status = Private::WaitShutdown;
   boost::thread t([=] {
     do
       boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
     while(!d->condition());
-    d->status = QuitResourcePrivate::ShutDown;
+    d->status = Private::ShutDown;
     WServer::instance()->log("notice") << "Server stopping as requested.";
     WServer::instance()->stop();
     while(WServer::instance()->isRunning())
@@ -98,6 +96,6 @@ QuitResource* QuitResource::setRestart(int argc, char** argv, char** envp)
 
 
 QuitResource::QuitResource(std::string password, ShutdownCondition condition, WObject* parent)
-    : WResource(parent), d(new QuitResourcePrivate(password, condition, this))
+    : WResource(parent), dptr(password, condition, this)
 {
 }

@@ -23,11 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define COMPOSITERESOURCE_H
 
 #include <Wt/WResource>
+#include "c++/dptr.h"
 
 namespace WtCommons {
-namespace WtCommonsPrivate {
-  class CompositeResourcePrivate;
-}
 
 class CompositeResource : public Wt::WResource
 {
@@ -37,7 +35,7 @@ public:
     CompositeResource(Wt::WObject* parent = 0);
     CompositeResource *add(std::string pathInfo, Wt::WResource *resource);
 private:
-  WtCommons::WtCommonsPrivate::CompositeResourcePrivate* const d;
+  D_PTR
 };
 }
 

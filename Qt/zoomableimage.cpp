@@ -68,7 +68,7 @@ ZoomableImage::~ZoomableImage()
 
 }
 
-ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(parent), d(new Private{this})
+ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(parent), dptr(new Private{this})
 {
   setLayout(new QGridLayout(this));
   layout()->setSpacing(0);

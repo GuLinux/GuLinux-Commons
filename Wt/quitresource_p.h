@@ -23,13 +23,13 @@
 
 #include "quitresource.h"
 
-namespace WtCommons { class QuitResource;
-namespace WtCommonsPrivate {
-class QuitResourcePrivate
+namespace WtCommons {
+
+class QuitResource::Private
 {
 public:
-  QuitResourcePrivate(std::string password, ShutdownCondition condition, WtCommons::QuitResource* q);
-  virtual ~QuitResourcePrivate();
+  Private(std::string password, ShutdownCondition condition, WtCommons::QuitResource* q);
+  virtual ~Private();
   std::string password;
   ShutdownCondition condition;
   WtCommons::QuitResource* const q;
@@ -40,5 +40,5 @@ public:
   Status status = Idle;
 };
 }
-}
+
 #endif // QUITRESOURCEPRIVATE_H

@@ -22,11 +22,9 @@
 #define QUITRESOURCE_H
 
 #include <Wt/WResource>
+#include "c++/dptr.h"
 
 namespace WtCommons {
-namespace WtCommonsPrivate {
-  class QuitResourcePrivate;
-}
 typedef std::function<bool()> ShutdownCondition;
 
 class QuitResource : public Wt::WResource
@@ -37,7 +35,7 @@ public:
     QuitResource(std::string password = std::string{}, ShutdownCondition condition = []{ return true; }, Wt::WObject* parent = 0);
     QuitResource *setRestart(int argc,char **argv, char **envp);
 private:
-    WtCommonsPrivate::QuitResourcePrivate* const d;
+    D_PTR
 };
 }
 

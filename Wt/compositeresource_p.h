@@ -23,23 +23,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define COMPOSITERESOURCEPRIVATE_H
 #include <string>
 #include <map>
+#include "compositeresource.h"
 
 namespace Wt {
 class WResource;
 }
 namespace WtCommons {
-namespace WtCommonsPrivate {
-class CompositeResourcePrivate
+class CompositeResource::Private
 {
 public:
-    CompositeResourcePrivate(CompositeResource* q);
-    virtual ~CompositeResourcePrivate();
+    Private(CompositeResource* q);
+    virtual ~Private();
 
     std::map<std::string, Wt::WResource*> resources;
 
 private:
   WtCommons::CompositeResource* const q;
 };
-}
+
 }
 #endif // COMPOSITERESOURCEPRIVATE_H

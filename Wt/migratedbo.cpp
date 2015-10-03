@@ -31,7 +31,6 @@
 #endif
 #include <typeindex>
 using namespace WtCommons;
-using namespace WtCommonsPrivate;
 using namespace std;
 using namespace Wt;
 namespace dbo = Wt::Dbo;
@@ -43,26 +42,16 @@ DboMigration::DboMigration( Migration migration, const string &migrationName, co
 }
 
 
-MigrateDboPrivate::MigrateDboPrivate( MigrateDbo *q, dbo::Session &session, dbo::SqlConnection *connection, const Migrations &migrations, const string &tablename )
+MigrateDbo::Private::Private( MigrateDbo *q, dbo::Session &session, dbo::SqlConnection *connection, const Migrations &migrations, const string &tablename )
   : q( q ), session( session ), connection( connection ), migrations( migrations ), tablename( tablename )
 {
 }
-MigrateDboPrivate::~MigrateDboPrivate()
+MigrateDbo::Private::~Private()
 {
 }
 
-namespace WtCommonsPrivate
-{
-  struct TemporarlyDisableForeignKeysSupport
-  {
-    TemporarlyDisableForeignKeysSupport( Dbo::SqlConnection *connection );
-    ~TemporarlyDisableForeignKeysSupport();
-    Dbo::SqlConnection *connection;
-    int wasEnabledInFirstPlace;
-  };
-}
 
-TemporarlyDisableForeignKeysSupport::TemporarlyDisableForeignKeysSupport( Dbo::SqlConnection *connection ) : connection(connection)
+MigrateDbo::Private::TemporarlyDisableForeignKeysSupport::TemporarlyDisableForeignKeysSupport( Dbo::SqlConnection *connection ) : connection(connection)
 {
   unique_ptr<Dbo::SqlStatement> getForeignKeysEnabledStatement { connection->prepareStatement( "PRAGMA foreign_keys" ) };
   getForeignKeysEnabledStatement->execute();
@@ -78,7 +67,7 @@ TemporarlyDisableForeignKeysSupport::TemporarlyDisableForeignKeysSupport( Dbo::S
   }
 }
 
-TemporarlyDisableForeignKeysSupport::~TemporarlyDisableForeignKeysSupport()
+MigrateDbo::Private::TemporarlyDisableForeignKeysSupport::~TemporarlyDisableForeignKeysSupport()
 {
   if( wasEnabledInFirstPlace )
   {
@@ -89,7 +78,7 @@ TemporarlyDisableForeignKeysSupport::~TemporarlyDisableForeignKeysSupport()
 }
 
 
-void MigrateDboPrivate::apply()
+void MigrateDbo::Private::apply()
 {
   cerr << "Applying migrations" << endl;
 
@@ -99,7 +88,7 @@ void MigrateDboPrivate::apply()
     dbo::Transaction t( session );
     for(int index = 0; index < migrations.size(); index++) {
       auto dboMigration = new DboMigration(*migrations[index]);
-      dboMigration->_whenApplied = WDateTime::currentDateTime().toPosixTime() ;
+      dboMigration->whenApplied() = WDateTime::currentDateTime().toPosixTime() ;
       dboMigration->_migrationIndex = index;
 
       session.add(dboMigration);
@@ -189,7 +178,7 @@ void DboMigration::execute( const string &statement, const vector< string > &arg
 
 
 MigrateDbo::MigrateDbo( dbo::Session &session, dbo::SqlConnection *connection, const Migrations &migrations, const string &tablename )
-  : d {new MigrateDboPrivate( this, session, connection, migrations, tablename )}
+  : dptr(this, session, connection, migrations, tablename )
 {
   session.mapClass<DboMigration>( tablename.c_str() );
 }

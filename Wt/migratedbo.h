@@ -47,10 +47,8 @@
 #ifdef HAVE_SQLITE3
   #include <Wt/Dbo/backend/Sqlite3>
 #endif
-namespace WtCommonsPrivate
-{
-  class MigrateDboPrivate;
-}
+#include "c++/dptr.h"
+
 namespace Wt
 {
   namespace Dbo
@@ -62,6 +60,7 @@ namespace Wt
 }
 namespace WtCommons
 {
+  class MigrateDbo;
   class DboMigration;
   typedef std::function<void ( Wt::Dbo::Transaction &, WtCommons::DboMigration & ) > Migration;
 
@@ -184,7 +183,7 @@ namespace WtCommons
       std::string _migrationName;
       Wt::Dbo::Transaction *_transaction = 0;
       Wt::Dbo::SqlConnection *_connection = 0;
-      friend class ::WtCommonsPrivate::MigrateDboPrivate;
+      friend class ::WtCommons::MigrateDbo;
   };
 
   typedef std::vector<std::shared_ptr<DboMigration>> Migrations;
@@ -194,7 +193,7 @@ namespace WtCommons
       MigrateDbo( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const Migrations &migrations, const std::string &tablename = "wt_migrations" );
       ~MigrateDbo();
     private:
-      const std::unique_ptr< ::WtCommonsPrivate::MigrateDboPrivate > d;
+      D_PTR
   };
 }
 #endif // DBMIGRATIONMANAGER_H

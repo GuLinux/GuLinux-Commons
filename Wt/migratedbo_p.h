@@ -22,13 +22,20 @@
 
 #include "migratedbo.h"
 #include <stdint.h>
-namespace WtCommonsPrivate
+namespace WtCommons
 {
-  class MigrateDboPrivate
+  class MigrateDbo::Private
   {
     public:
-      MigrateDboPrivate( WtCommons::MigrateDbo *q, Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const WtCommons::Migrations &migrations, const std::string &tablename );
-      virtual ~MigrateDboPrivate();
+      struct TemporarlyDisableForeignKeysSupport
+      {
+	TemporarlyDisableForeignKeysSupport( Wt::Dbo::SqlConnection *connection );
+	~TemporarlyDisableForeignKeysSupport();
+	Wt::Dbo::SqlConnection *connection;
+	int wasEnabledInFirstPlace;
+      };
+      Private( MigrateDbo *q, Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const WtCommons::Migrations &migrations, const std::string &tablename );
+      virtual ~Private();
       Wt::Dbo::Session &session;
       Wt::Dbo::SqlConnection *connection;
       WtCommons::Migrations migrations;

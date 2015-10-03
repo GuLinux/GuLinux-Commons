@@ -29,19 +29,18 @@ using namespace Wt;
 using namespace boost;
 using namespace std;
 using namespace WtCommons;
-using namespace WtCommonsPrivate;
 
 namespace fs = boost::filesystem;
 
-namespace WtCommons { namespace WtCommonsPrivate {
-class WHTMLTemplatesLocalizedStringsPrivate {
+namespace WtCommons { 
+class WHTMLTemplatesLocalizedStrings::Private {
 public:
   void processHtmlTemplate(boost::filesystem::path path, const std::string &locale = std::string());
   std::map<string,string> translationMap;
 };
-}}
+}
 
-WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& resourcesDir, WObject* parent): WObject(parent), d(new WHTMLTemplatesLocalizedStringsPrivate)
+WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& resourcesDir, WObject* parent): WObject(parent), dptr()
 {
   fs::path p(resourcesDir);
   for(fs::directory_iterator it(p); it != fs::directory_iterator(); it++) {
@@ -56,7 +55,7 @@ WHTMLTemplatesLocalizedStrings::WHTMLTemplatesLocalizedStrings(const string& res
   }
 }
 
-void WHTMLTemplatesLocalizedStringsPrivate::processHtmlTemplate(filesystem::path path, const string &locale)
+void WHTMLTemplatesLocalizedStrings::Private::processHtmlTemplate(filesystem::path path, const string &locale)
 {
   string key = (locale.empty() ? string() : locale + "_") + path.filename().replace_extension().string();
   ifstream file(path.string());
@@ -82,6 +81,5 @@ bool WHTMLTemplatesLocalizedStrings::resolveKey(const std::string& key, std::str
 
 WHTMLTemplatesLocalizedStrings::~WHTMLTemplatesLocalizedStrings()
 {
-  delete d;
 }
 

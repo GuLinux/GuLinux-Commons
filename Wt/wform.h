@@ -2,6 +2,7 @@
 #define WTCOMMONS_WFORM_H
 #include <memory>
 #include <Wt/WContainerWidget>
+#include "c++/dptr.h"
 
 namespace WtCommons {
 
@@ -14,9 +15,7 @@ namespace WtCommons {
     WForm *add(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
     WContainerWidget *addControl(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
   private:
-    class Private;
-    friend class Private;
-    std::unique_ptr<Private> const d;
+    D_PTR
   };
 
 } // namespace WtCommons

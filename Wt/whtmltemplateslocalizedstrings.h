@@ -24,11 +24,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <Wt/WLocalizedStrings>
 #include <Wt/WObject>
+#include "c++/dptr.h"
 
 namespace WtCommons {
-  namespace WtCommonsPrivate {
-    class WHTMLTemplatesLocalizedStringsPrivate;
-  }
+
 class WHTMLTemplatesLocalizedStrings : public Wt::WLocalizedStrings, public Wt::WObject
 {
 
@@ -37,7 +36,7 @@ public:
   virtual bool resolveKey(const std::string& key, std::string& result);
   virtual ~WHTMLTemplatesLocalizedStrings();
 private:
-  WtCommons::WtCommonsPrivate::WHTMLTemplatesLocalizedStringsPrivate *const d;
+  D_PTR
 };
 
 

@@ -14,7 +14,7 @@ namespace WtCommons {
       const int labelColumns;
   };
 
-  WForm::WForm(Type type, int labelColumns, WContainerWidget *parent) : WContainerWidget(parent), d(new Private(type, labelColumns))
+  WForm::WForm(Type type, int labelColumns, WContainerWidget *parent) : WContainerWidget(parent), dptr(type, labelColumns)
   {
     static map<Type, string> typeClass {
       {Default, ""},
