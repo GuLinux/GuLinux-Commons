@@ -61,6 +61,17 @@ git_update_repo_command() {
  echo '( cd ${REPO_DIR} && git pull && git submodule update )'
 }
 
+update_projects_json() {
+  sep=""
+  echo -en "[" > "$PROJECTS_DIR/projects.json"
+  find "$PROJECTS_DIR" -name "bashci-project" | sort -n | while read fname; do
+    . "$fname"
+    echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_DIR/projects.json"
+    sep=","
+  done
+  echo -en "]" >> "$PROJECTS_DIR/projects.json"
+}
+
 
 add_project() {
   PROJECT_NAME="$1"
@@ -107,6 +118,7 @@ bashci_failure_trigger() {
 
 EOF
   $EDITOR "$( project_buildfile )"
+  update_projects_json
 }
 
 build_project() {
@@ -158,39 +170,37 @@ rewrite_index_html() {
     <nav class="navbar navbar-inverse">
       <div class="container">
         <div class="navbar-header">
-          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
           <a class="navbar-brand" href="#">Bash Continuous Integration</a>
         </div>
-        <div id="navbar" class="collapse navbar-collapse">
-          <ul class="nav navbar-nav">
-            <li class="active"><a href="#">Home</a></li>
-          </ul>
-        </div><!--/.nav-collapse -->
       </div>
     </nav>
 
-    <div class="container">
-      <table class="table projects table-bordered">
-        <tr><th>Project</th><th>Description</th><th>Status</th></tr>
-      </table>
+    <div class="container-fluid">
+      <ul class="nav nav-tabs projects-tabs">
+        <li class="active"><a href="#home" data-toggle="tab">Dashboard</a></li>
+      </ul>
+      <div class="tab-content projects-tabs-content">
+        <div class="tab-pane active" id="home">
+          <table class="table projects table-bordered">
+            <tr><th>Project</th><th>Description</th><th>Status</th></tr>
+          </table>
+        </div>
+      </div>
     </div><!-- /.container -->
   </body>
   <script>
     var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
     var add_project = function(project) {
       \$(".projects").append("<tr id='" + project.name + "_row'></tr>");
+      \$(".projects-tabs").append('<li><a href="#project_' + project.name + '" data-toggle="tab">' + project.name + '</a></li>');
+      \$(".projects-tabs-content").append('<div class="tab-pane" id="project_' + project.name + '"></div>');
       \$("#" + project.name + "_row").html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_status'></td>");
       window.setInterval(function() {
         jQuery.getJSON( project.name + "/work/last_build", function(status){
           \$('#' + project.name + '_build_status').html(status.status_name);
           \$("#" + project.name + "_row").attr("class", status_colors_map[status.status_name]);
         });
-      }, 500);
+      }, 1000);
     }
     jQuery.getJSON("projects.json", function(projects){
         for(var i=0; i<projects.length; i++){
@@ -203,14 +213,6 @@ EOF
 }
 
 [[ -r "$INDEX_HTML" ]] || rewrite_index_html
-
-sep=""
-echo -en "[" > "$PROJECTS_DIR/projects.json"
-find "$PROJECTS_DIR" -name "bashci-project" | while read fname; do
-  . "$fname"
-  echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_DIR/projects.json"
-  sep=","
-done
-echo -en "]" >> "$PROJECTS_DIR/projects.json"
+update_projects_json
 
 if [[ -n "$1" && "$( type -t "$1" )" == "function" ]]; then "$@"; else usage; fi
