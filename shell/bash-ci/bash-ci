@@ -14,9 +14,9 @@ usage() {
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
 MAX_JOBS="${MAX_JOBS:-2}"
-
 INDEX_HTML="$PROJECTS_DIR/index.html"
 PID_FILE_NAME="build.pid"
+SQLITE_FILE="project.db"
 
 mkdir -p "${PROJECTS_DIR}"
 
@@ -46,6 +46,10 @@ project_repodir() {
 
 projectfile() {
   echo "$( project_basedir)/bashci-project"
+}
+
+projectdb() {
+  echo "$( project_basedir)/$SQLITE_FILE"
 }
 
 queue_is_free() {
@@ -88,6 +92,7 @@ PROJECT_DESCRIPTION=""
 PROJECT_DIR="$( project_workdir )"
 REPO_DIR="$( project_repodir )"
 EOF
+  sqlite3 "$(projectdb)" <<<"CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT);"
   cat >"$( project_buildfile )" <<EOF
 #!/bin/bash
 
@@ -126,6 +131,8 @@ EOF
 build_project() {
   PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
+  build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now')), 'building'); select last_insert_rowid();")"
+  echo "Build id: $build_id"
   while ! queue_is_free; do sleep 1; done
   echo "$BASHPID" > "$(project_pidfile)"
   build_started_time="$( date -Is )"
@@ -136,6 +143,7 @@ build_project() {
   done
   status_code="$?"
   [[ "${status_code}" == 0 ]] && build_status="success" || build_status="failure"
+  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now')), exit_code=$status_code, status='$build_status' WHERE id = $build_id;"
   echo "$(date -Is) - Build finished: $build_status ($status_code)" >&2
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
   echo "{\"exit_status\":$status_code,\"status_name\":\"$build_status\",\"started\":\"$build_started_time\",\"ended\":\"$(date -Is)\"}" > "$( project_lastbuild)"
