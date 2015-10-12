@@ -1,0 +1,51 @@
+#!/bin/bash
+
+randMax() {
+  n=$RANDOM
+  while test "$n" -gt "$1"; do
+    n=$(( $n / 10 ))
+  done
+  echo $n
+}
+
+help() {
+  echo "Usage: $0 [--reset-ts] commit message"
+  echo "       $0 --set-ts start-date"
+}
+
+
+LAST_COMMIT_TS_FILE="/tmp/$( basename $0).ts"
+if test "$1" == "" || test "$1" == "--help"; then
+  help
+  exit 0
+fi
+
+if test "$1" == "--reset-ts"; then
+  rm "$LAST_COMMIT_TS_FILE"
+  shift
+fi
+
+if test "$1" == "--set-ts"; then
+  if test "$2" == ""; then
+    help
+    exit 1
+  fi
+  echo "$( date --date "$2" "+%s" )" > "$LAST_COMMIT_TS_FILE"
+  exit 0
+fi
+
+if ! [ -r "$LAST_COMMIT_TS_FILE" ]; then
+        YESTERDAY="$( date +"%Y-%m-%d" --date "@$(( $(date +%s)-86400 ))" )"
+        YESTERDAY="$( date +%s --date="@$(( $(date +%s --date "${YESTERDAY}T18:30:00") + $( randMax 1200) ))")"
+	echo "$YESTERDAY" > "$LAST_COMMIT_TS_FILE"
+fi
+
+NEW_COMMIT_TS="$(( $( randMax 2000 ) + $( cat "$LAST_COMMIT_TS_FILE" ) ))"
+echo "New commit date: $( date -d "@$NEW_COMMIT_TS" )"
+
+GIT_AUTHOR_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_AUTHOR_DATE
+GIT_COMMITTER_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_COMMITTER_DATE
+
+git commit -m "$1" || exit 1
+echo "$NEW_COMMIT_TS" > "$LAST_COMMIT_TS_FILE"
+ 

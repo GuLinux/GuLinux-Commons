@@ -1,0 +1,64 @@
+#!/bin/bash
+
+
+doHelp() {
+  echo "Usage: $( basename $0) url [flags]"
+  echo "Flags:"
+  echo "  -t timeout   : checks every <timeout> seconds (default: 5)"
+  echo "  -n           : use system GUI notifications (default: off)"
+  echo "  -m addresses : send email to addresses (comma separated)" 
+}
+
+if test "x$1" == "x"; then
+  doHelp
+  exit 1
+fi
+
+
+
+page="$1"; shift
+[ "$page" == "--help" ] && doHelp && exit 0
+
+timeout=5
+
+while test "x$1" != "x"; do
+  flag="$1"; shift
+  case "$flag" in
+    "-t")
+      timeout="$1"; shift
+      ;;
+    "-n")
+      USE_NOTIFICATIONS=true
+      ;;
+    "-m")
+      SEND_MAIL_TO="$1"; shift
+      ;;
+    *)
+      doHelp
+    exit 1
+  esac
+done
+
+
+page_status="/tmp/$( basename $0)-$( echo "$page" | md5sum | awk '{ print $1 }' ).status"
+page_out="/tmp/$( basename "$0")-$$.html"
+curl "$page" 2>/dev/null > "$page_out"
+cat "$page_out" | md5sum | awk '{ print $1 }' > "$page_status"
+echo "Wrote first status checksum; watching page for modifications."
+echo "CTRL-C to quit, CTRL-Z followed by \"bg\" command to put in background."
+while sleep "$timeout" ; do
+  curl "$page" 2>/dev/null > "${page_out}.tmp"
+  new_md5="$( cat "${page_out}.tmp" | md5sum | awk '{ print $1 }' )"
+  if [ "$new_md5" != "$( cat $page_status )" ]; then
+    message="$( date ): Web Page $page just changed: \n $( diff -ru "${page_out}" "${page_out}.tmp" )"
+    mv "${page_out}.tmp" "$page_out"
+    echo -e "$message"
+    if [ "$USE_NOTIFICATIONS" == "true" ] ; then
+      notify-send -t 0 -u normal -a "$( basename $0)" "$( basename "$0")" "$message"
+    fi
+    if [ "$SEND_MAIL_TO" != "" ] ; then
+      mail -s "Page changed: $page" -t "$SEND_MAIL_TO" <<<"$message"
+    fi
+    echo "$new_md5" > "$page_status"
+  fi
+done

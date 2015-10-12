@@ -1,0 +1,9 @@
+#!/bin/bash
+
+content="$@"
+
+[ -p /dev/fd/0 ] && content="$( cat )"
+
+echo "Copying content: $content"
+
+qdbus org.kde.klipper /klipper setClipboardContent "$content"

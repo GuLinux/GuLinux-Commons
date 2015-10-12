@@ -1,0 +1,69 @@
+#!/bin/bash
+usage() {
+  cat <<EOF
+Usage: $0 host-spec [options]
+host-spec is a valid ssh hostname specification (i.e.: hostname, user@hostname, user@hostname:port, etc).
+Options: 
+-s|--seconds seconds		Loop for seconds before retrying connections
+-o|--ssh-option options		ssh connection options (may be specified multiple times
+-d|--daemon			daemonize
+-n|--name			name
+EOF
+}
+
+ssh_host="$1"; shift
+if test "x$ssh_host" == "x" || test "$ssh_host" == "--help"; then
+	usage
+	exit 1
+fi
+
+LOOP_SECS=2
+SSH_OPTIONS=""
+DAEMONIZE=false
+original_command_line="$0 \"$ssh_host\""
+name="$$"
+
+while test "$1" != ""; do
+	option="$1"; shift
+	case "$option" in
+		-s|--seconds)
+                original_command_line="$original_command_line $option $1"
+		LOOP_SECS="$1"; shift
+		;;
+                -n|--name)
+                original_command_line="$original_command_line $option \"$1\""
+                NAME="$1"; shift
+                ;;
+		-o|--ssh-option)
+                original_command_line="$original_command_line $option \"$1\""
+		SSH_OPTIONS="$SSH_OPTIONS $1"; shift
+		;;
+                -d|--daemon)
+                DAEMONIZE=true
+		;;
+		*)
+		usage
+		exit 1
+		;;
+	esac
+done
+
+LOCK_FILE="/tmp/$( basename $0).${NAME}.lock"
+
+connectLoop() {
+        if [ -r "$LOCK_FILE" ] && [ -d "/proc/$( cat "$LOCK_FILE")" ]; then
+          exit 1
+        fi
+        echo "$$" > "$LOCK_FILE"
+	while [ -r "$LOCK_FILE" ]; do
+  		ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=2  $SSH_OPTIONS -N $ssh_host
+	  	sleep "$LOOP_SECS"
+	done
+        rm -f "$LOCK_FILE"
+}
+
+if test "$DAEMONIZE" == "true"; then
+	eval "nohup $original_command_line > /dev/null 2>&1 &"
+else
+	connectLoop
+fi

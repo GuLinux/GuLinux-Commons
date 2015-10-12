@@ -1,0 +1,59 @@
+#!/bin/bash
+
+container="$1"; shift
+pidfile="${PIDS_DIRECTORY:-/var/run}/${container}.pid"
+
+container_variable() {
+  docker inspect -f "{{$@}}" "$container"
+}
+
+container_is_running() {
+  [[ "$( container_variable .State.Running )" == "true" ]]
+}
+
+container_start() {
+  docker start "$container"
+  loop_count="0"
+  while ! container_is_running && ((loop_count++ < 30)); do
+    echo -en "." >&2
+    sleep 1
+  done
+  if ! container_is_running; then
+    echo "Error starting container $container" >&2
+    docker logs "$container"
+    exit 1
+  fi
+  container_variable .State.Pid > "$pidfile"
+}
+
+container_stop() {
+  docker stop "$container"
+  loop_count="0"
+  while container_is_running && ((loop_count++ < 30)); do
+    echo -en "." >&2
+    sleep 1
+  done
+  if container_is_running; then
+    echo "Error stopping container $container" >&2
+    docker logs "$container"
+    exit 1
+  fi
+  rm -f "$pidfile"
+}
+
+case "$1" in
+  start)
+    container_start
+    ;;
+  stop)
+    container_stop
+    ;;
+  status)
+    container_is_running && echo "started" || echo "stopped"
+    ;;
+  *)
+    echo "Usage: $0 container start|stop|status"
+    echo "Pids file directory can be overridden setting PIDS_DIRECTORY variable"
+    exit 1
+    ;;
+esac

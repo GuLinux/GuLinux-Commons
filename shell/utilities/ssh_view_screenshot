@@ -1,0 +1,69 @@
+#!/bin/bash
+
+usage() {
+  cat <<EOF
+Usage: $0 -h [user@]hostname [options]
+Options:
+  -d|--display X11-Display
+  -q|--quality image-quality
+  -n|--no-display (skips opening image viewer)
+  -s|--save-to destination-file-or-directory
+EOF
+}
+
+DISPLAY=":0"
+REMOTE_HOST=""
+while test "$1" != ""; do
+  case "$1" in
+    -h|--remote-host)
+    REMOTE_HOST="$2"; shift
+    ;;
+    -d|--display)
+    DISPLAY="$2"; shift
+    ;;
+    -q|--quality)
+    CONVERT_OPTS="$CONVERT_OPTS -quality $2"; shift
+    ;;
+    -s|--save-to)
+    save_to="$2"; shift
+    ;;
+    -n|--no-display)
+    no_display="true"
+    ;;
+    --debug)
+    debug="true"
+    ;;
+    *)
+    usage
+    exit 1
+  esac
+  shift
+done
+
+if test "$REMOTE_HOST" == ""; then
+  usage
+  exit 1
+fi
+
+
+BASE_FNAME="$( date +%Y-%m-%d-T%H-%M-%S )"
+FNAME="/tmp/.${BASE_FNAME}"
+
+ssh -C -4 "$REMOTE_HOST" "bash --noprofile --norc"  <<EOF
+  [ "$debug" == "true" ] && set -x
+  convert_cmd="convert"
+  which gm 2>&1 >/dev/null && convert_cmd="gm convert"
+  xwd -display "$DISPLAY" -silent -root -out "${FNAME}.xwd"
+  \$convert_cmd "${FNAME}.xwd" $CONVERT_OPTS "${FNAME}.jpg"
+  rm "${FNAME}.xwd"
+EOF
+
+rsync --remove-source-files -avPhz "$REMOTE_HOST":"${FNAME}.jpg" "/tmp/${BASE_FNAME}.jpg"
+
+[ "$no_display" != "true" ] && xdg-open "/tmp/${BASE_FNAME}.jpg"
+#rm -f "${BASE_FNAME}.jpg"
+
+[ "$save_to" != "" ] && cp "/tmp/${BASE_FNAME}.jpg" "$save_to"
+
+#[ "$keep_temp" == "true" ] || rm -f "/tmp/${BASE_FNAME}.jpg"
+
