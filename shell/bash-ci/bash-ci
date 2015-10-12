@@ -13,7 +13,7 @@ usage() {
 
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
-QUEUE_SIZE="${QUEUE_SIZE:-2}"
+MAX_JOBS="${MAX_JOBS:-2}"
 
 INDEX_HTML="$PROJECTS_DIR/index.html"
 PID_FILE_NAME="build.pid"
@@ -48,8 +48,10 @@ projectfile() {
   echo "$( project_basedir)/bashci-project"
 }
 
-queue_free() {
-  [[ ! -r "$( project_pidfile )" && "$( find "$PROJECTS_DIR" -name "$PID_FILE_NAME" )" -lt "$QUEUE_SIZE" ]]
+queue_is_free() {
+set -x
+  [[ ! -r "$( project_pidfile )" && "$( find "$PROJECTS_DIR" -name "$PID_FILE_NAME" | wc -l )" -lt "$MAX_JOBS" ]]
+  set +x
 }
 
 git_init_repo() {
@@ -124,7 +126,7 @@ EOF
 build_project() {
   PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
-  while ! queue_free; do sleep 1; done
+  while ! queue_is_free; do sleep 1; done
   echo "$BASHPID" > "$(project_pidfile)"
   build_started_time="$( date -Is )"
   echo "{\"status_name\":\"building\",\"started\":\"$build_started_time\"}" > "$(project_lastbuild)"
