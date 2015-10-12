@@ -6,14 +6,17 @@ APPNAME="$( basename "$0")"
 
 usage() {
   echo "Usage: $0 function" >&2
-  echo "Functions: add_project" >&2
+  echo "Functions: add_project trigger_build rewrite_index_html" >&2
   echo "$@" >&2
   exit 1
 }
 
-CMD_PREFIX="${CMD_PREFIX:-bash}"
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
+
+INDEX_HTML="$PROJECTS_DIR/index.html"
+
+mkdir -p "${PROJECTS_DIR}"
 
 project_basedir() {
   echo "${PROJECTS_DIR}/${PROJECT_NAME}"
@@ -129,8 +132,9 @@ trigger_build() {
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
 
-
-[[ -r "$PROJECTS_DIR/index.html" ]] || cat > "$PROJECTS_DIR/index.html" <<EOF
+rewrite_index_html() {
+  rm -f "$INDEX_HTML"
+  cat > "$INDEX_HTML" <<EOF
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -163,16 +167,26 @@ trigger_build() {
       </div>
     </nav>
 
-    <div class="container projects">
+    <div class="container">
+      <table class="table projects table-bordered">
+        <tr><th>Project</th><th>Description</th><th>Status</th></tr>
+      </table>
     </div><!-- /.container -->
   </body>
   <script>
     var add_project = function(project) {
-      \$(".projects").append("<div class='row'><div class='col-md-4'>" + project.name + "</div><div class='col-md-7'>" + project.description + "</div><div class='col-md-1' id='" + project.name + "_build_status'>-</div></div>");
+      \$(".projects").append("<tr id='" + project.name + "_row'></tr>");
+      \$("#" + project.name + "_row").html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_status'></td>");
       jQuery.getJSON( project.name + "/work/last_build", function(status){
-      console.log(status);
-        \$('#' + project.name + '_build_status').text=status.status_name;
-      console.log(\$('#' + project.name + '_build_status'));
+        \$('#' + project.name + '_build_status').text(status.status_name);
+        var color;
+        if(status.status_name == "building")
+          color="info";
+        if(status.status_name == "failure")
+          color="danger";
+        if(status.status_name == "success")
+          color="success";
+        \$("#" + project.name + "_row").addClass(color);
       });
     }
     jQuery.getJSON("projects.json", function(projects){
@@ -183,6 +197,9 @@ trigger_build() {
   </script>
 </html>
 EOF
+}
+
+[[ -r "$INDEX_HTML" ]] || rewrite_index_html
 
 sep=""
 echo -en "[" > "$PROJECTS_DIR/projects.json"
