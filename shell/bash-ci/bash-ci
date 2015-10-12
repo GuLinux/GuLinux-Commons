@@ -16,18 +16,30 @@ WWW_DIR="${WWW_DIR:-/var/www/${APPNAME}}"
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
 
-project_workdir() {
+project_basedir() {
   echo "${PROJECTS_DIR}/${project_name}"
 }
 
+project_workdir() {
+  echo "$( project_basedir )/work"
+}
+
 project_buildfile() {
-  echo "$( project_workdir )/build.sh"
+  echo "$( project_basedir )/build.sh"
+}
+
+project_repodir() {
+  echo "$( project_basedir )/repo"
+}
+
+projectfile() {
+  echo "$( project_basedir)/bashci-project"
 }
 
 
 git_init_repo() {
-  git clone "$1" "$(project_workdir)/repo"
-  ( cd "$(project_workdir)/repo" && git submodule init )
+  git clone "$1" "$(project_repodir)"
+  ( cd "$(project_repodir)" && git submodule init )
 }
 
 git_update_repo_command() {
@@ -42,16 +54,23 @@ add_project() {
   [ -z "$repo_url" ] && usage "add_project repo_name repo_type repo_url (repo type currently supported: git)"
   mkdir -p "$( project_workdir )"
   "${repo_type}_init_repo" "$repo_url"
+  cat >"$( projectfile )" <<EOF
+PROJECT_NAME="$project_name"
+PROJECT_DESCRIPTION=""
+PROJECT_DIR="$( project_workdir )"
+REPO_DIR="$( project_repodir )"
+EOF
   cat >"$( project_buildfile )" <<EOF
 #!/bin/bash
 
-## $project_name build file. Tweak it and add build options to make it automatically run.
-## You can also parse arguments in "\$@" before starting any build, for instance to set a working branch.
-PROJECT_NAME="$project_name"
-PROJECT_DIR="$( project_workdir )"
-REPO_DIR="$( project_workdir )/repo"
-## Update repository function: tweak if needed
+. "$( projectfile )"
 
+## $project_name build file. Tweak it and add build options to make it automatically run.
+## Available environment variables: PROJECTS_DIR PROJECT_NAME PROJECT_DESCRIPTION REPO_DIR
+## You can also parse arguments in "\$@" before starting any build, for instance to set a working branch.
+
+
+# Update repository function: tweak if needed
 bashci_build_00_update_repo() {
   $( "${repo_type}_update_repo_command" )
 }
@@ -78,6 +97,7 @@ EOF
 build_project() {
   project_name="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" 
+  touch "$( project_workdir)/building"
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" >&2
     "$fname" || exit 1
@@ -86,6 +106,8 @@ build_project() {
   [[ "${status_code}" == 0 ]] && build_status="success" || build_status="failure"
   echo "$(date -Is) - Build finished: $build_status ($status_code)" >&2
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
+  rm -f "$( project_workdir)/building"
+  echo "$status_code|$build_status" > "$( project_workdir)/last_build"
   exit "${status_code}"
 }
 
