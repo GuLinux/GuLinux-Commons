@@ -13,8 +13,10 @@ usage() {
 
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
+QUEUE_SIZE="${QUEUE_SIZE:-2}"
 
 INDEX_HTML="$PROJECTS_DIR/index.html"
+PID_FILE_NAME="build.pid"
 
 mkdir -p "${PROJECTS_DIR}"
 
@@ -30,8 +32,8 @@ project_buildfile() {
   echo "$( project_basedir )/build.sh"
 }
 
-project_buildingfile() {
-  echo "$( project_basedir )/building"
+project_pidfile() {
+  echo "$( project_basedir )/$PID_FILE_NAME"
 }
 
 project_lastbuild() {
@@ -46,6 +48,9 @@ projectfile() {
   echo "$( project_basedir)/bashci-project"
 }
 
+queue_free() {
+  [[ ! -r "$( project_pidfile )" && "$( find "$PROJECTS_DIR" -name "$PID_FILE_NAME" )" -lt "$QUEUE_SIZE" ]]
+}
 
 git_init_repo() {
   git clone "$1" "$(project_repodir)"
@@ -106,9 +111,11 @@ EOF
 
 build_project() {
   PROJECT_NAME="$1"; shift
-  [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" 
-  touch "$( project_buildingfile)"
-  echo "{\"status_name\":\"building\"}" > "$( project_lastbuild)"
+  [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
+  while ! queue_free; do sleep 1; done
+  echo "$BASHPID" > "$(project_pidfile)"
+  build_started_time="$( date -Is )"
+  echo "{\"status_name\":\"building\",\"started\":\"$build_started_time\"}" > "$(project_lastbuild)"
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" >&2
     "$fname" || exit 1
@@ -117,8 +124,8 @@ build_project() {
   [[ "${status_code}" == 0 ]] && build_status="success" || build_status="failure"
   echo "$(date -Is) - Build finished: $build_status ($status_code)" >&2
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
-  rm -f "$( project_buildingfile)"
-  echo "{\"exit_status\":$status_code,\"status_name\":\"$build_status\"}" > "$( project_lastbuild)"
+  echo "{\"exit_status\":$status_code,\"status_name\":\"$build_status\",\"started\":\"$build_started_time\",\"ended\":\"$(date -Is)\"}" > "$( project_lastbuild)"
+  rm -f "$( project_pidfile)"
   exit "${status_code}"
 }
 
@@ -174,20 +181,16 @@ rewrite_index_html() {
     </div><!-- /.container -->
   </body>
   <script>
+    var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
     var add_project = function(project) {
       \$(".projects").append("<tr id='" + project.name + "_row'></tr>");
       \$("#" + project.name + "_row").html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_status'></td>");
-      jQuery.getJSON( project.name + "/work/last_build", function(status){
-        \$('#' + project.name + '_build_status').text(status.status_name);
-        var color;
-        if(status.status_name == "building")
-          color="info";
-        if(status.status_name == "failure")
-          color="danger";
-        if(status.status_name == "success")
-          color="success";
-        \$("#" + project.name + "_row").addClass(color);
-      });
+      window.setInterval(function() {
+        jQuery.getJSON( project.name + "/work/last_build", function(status){
+          \$('#' + project.name + '_build_status').html(status.status_name);
+          \$("#" + project.name + "_row").attr("class", status_colors_map[status.status_name]);
+        });
+      }, 500);
     }
     jQuery.getJSON("projects.json", function(projects){
         for(var i=0; i<projects.length; i++){
