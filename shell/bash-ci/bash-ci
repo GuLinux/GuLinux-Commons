@@ -199,7 +199,7 @@ build_project() {
   wait_lock
   wait_for_free_builders
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
-  build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now')), 'building'); select last_insert_rowid();")"
+  build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
   logfile="$(project_workdir)/${build_id}.log"
   : > "$logfile"
   log() {
@@ -222,7 +222,7 @@ build_project() {
   done
   local exit_code="$?"
   [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
-  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
+  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now', 'localtime')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
   echo "$(date -Is) - Build finished: $build_status ($exit_code)" | log
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
   update_project_json
