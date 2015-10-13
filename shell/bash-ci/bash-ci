@@ -206,65 +206,92 @@ rewrite_index_html() {
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script>
+      var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
+      var showTab = function(name) {
+        $('.tabs-stack').hide();
+        $('#' + name).show();
+      };
+      var update_project_history_timer = false;
+      var update_project_logs_timer = false;
+      
+      
+      var read_log = function(id, name) {
+          jQuery.get( name + "/work/" + id + ".log", function(log){
+              $('#project-details-build-log').text(log);
+          });
+      };
+      var tail_log = function(event) {
+        clearInterval(update_project_logs_timer);
+        read_log(event.data.id, event.data.name);
+        update_project_logs_timer = setInterval(function() {read_log(event.data.id, event.data.name); }, 1000);
+      };
+      var showProject = function(name) {
+        $('#project-details-name').html(name);
+        var update_project_history = function() {
+          jQuery.getJSON( name + "/work/history", function(history){
+            $('#project-details-history').empty();
+            for(var i = 0; i<history.length; i++) {
+              $('<li><a href="#"><span class="text-' + status_colors_map[history[i].status] + '">' + history[i].started + '</span></a></li>').appendTo('#project-details-history')
+                .click( {"id": history[i].id, "name": name}, tail_log);
+            }
+          });
+        };
+        $('#project-details-history').empty();
+        update_project_history();
+        $('#project-details-build-log').empty();
+        update_project_history_timer = setInterval(update_project_history, 1000);
+        showTab('project-details');
+      };
+      
+      var showDashboard = function() {
+        clearInterval(update_project_history_timer);
+        clearInterval(update_project_logs_timer);
+        showTab('dashboard');
+      };
+    </script>
   </head>
   <body>
-    <nav class="navbar navbar-inverse">
-      <div class="container">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="#">Bash Continuous Integration</a>
+    <h2>Bash Continuous Integration</h2>
+    <div class="container tabs-stack" id="dashboard">
+      <h3>Dashboard</h3>
+      <table class="table projects table-bordered">
+        <tr><th>Project</th><th>Description</th><th>Started</th><th>Status</th></tr>
+      </table>
+    </div>
+    <div class="container-fluid tabs-stack" id="project-details" style="display: none">
+      <div class="row">
+        <h3 id="project-details-name" class="col-xs-10"></h3>
+        <div class="col-xs-2">
+          <button id="back-to-dashboard" class="btn btn-primary pull-right" onclick="showDashboard();">Back to dashboard</button>
         </div>
       </div>
-    </nav>
-
-    <div class="container-fluid">
-      <ul class="nav nav-tabs projects-tabs">
-        <li class="active"><a href="#home" data-toggle="tab">Dashboard</a></li>
-      </ul>
-      <div class="tab-content projects-tabs-content">
-        <div class="tab-pane active" id="home">
-          <table class="table projects table-bordered">
-            <tr><th>Project</th><th>Description</th><th>Last Build</th><th>Status</th></tr>
-          </table>
-        </div>
+      <div class="row">
+        <h4 class="col-xs-2">History</h4>
+        <h4 class="col-xs-10">Logs</h4>
       </div>
-    </div><!-- /.container -->
+      <div class="row">
+        <div class="col-xs-2"><ul id="project-details-history"></ul></div>
+        <div class="col-xs-10"><pre id="project-details-build-log"></pre></div>
+      </div>
+    </div>
   </body>
   <script>
-    var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
-    var read_log = function(data) {
-        console.log(data.data);
-        jQuery.get( data.data.name + "/work/" + data.data.id + ".log", function(log){
-            $('#' + data.data.div_id).html('<pre>' + log + '</pre>');
-        });
-    }
-    var add_project_tab = function(name, tab) {
-        $('#' + tab).html('<div class="container-fluid"><ul class="nav nav-pills nav-stacked builds col-xs-2" id="' + name + '_builds"></ul> \
-        <div class="col-xs-10" id="' + name + '_logs">foo bla bar</div></div>');
-        var updateInterval = setInterval(function(){
-             jQuery.getJSON( name + "/work/history", function(history){
-                $('#' + name + '_builds').empty();
-                for(var i = 0; i<history.length; i++) {
-                  $('<li><a href="#"><span class="text-' + status_colors_map[history[i].status] + '">' + history[i].started + '</span></a></li>').appendTo('#' + name + '_builds')
-                    .click( {"id": history[i].id, "name": name, "div_id": name + '_logs'}, read_log);
-                }
-             });
-        }, 1000);
-    }
     var add_project = function(project) {
       var tabname=project.name + "_tab";
       var rowname=project.name + "_row";
       $(".projects").append("<tr id='" + rowname + "'></tr>");
       $(".projects-tabs").append('<li><a href="#' + tabname + '" data-toggle="tab">' + project.name + '</a></li>');
-      $(".projects-tabs-content").append('<div class="tab-pane" id="' + tabname + '"></div>');
-      add_project_tab(project.name, tabname);
-      $("#" + rowname).html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_started'/><td id='" + project.name + "_build_status'/>");
-      window.setInterval(function() {
+      $("#" + rowname).html("<td><a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a></td><td>" + project.description + "</td><td id='" + project.name + "_build_started'/><td id='" + project.name + "_build_status'/>");
+      var show_status = function() {
         jQuery.getJSON( project.name + "/work/last_build", function(status){
           $('#' + project.name + '_build_status').html(status.status);
           $('#' + project.name + '_build_started').html(status.started);
           $("#" + rowname).attr("class", status_colors_map[status.status]);
         });
-      }, 1000);
+      };
+      show_status();
+      window.setInterval(show_status, 1000);
     }
     jQuery.getJSON("projects.json", function(projects){
         for(var i=0; i<projects.length; i++){
