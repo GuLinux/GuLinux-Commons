@@ -18,6 +18,7 @@ PROJECTS_HISTORY_LIMIT="${PROJECTS_HISTORY_LIMIT:-20}"
 INDEX_HTML="$PROJECTS_DIR/index.html"
 PID_FILE_NAME="build.pid"
 SQLITE_FILE="project.db"
+BASHCI_USER="${BASHCI_USER:-$USER}"
 
 mkdir -p "${PROJECTS_DIR}"
 
@@ -324,6 +325,14 @@ rewrite_index_html() {
 </html>
 EOF
 }
+
+if [[ "$1" == sudo ]]; then
+  shift
+  if [[ "${BASHCI_USER}" != "$USER" ]]; then
+    sudo -Hu "${BASHCI_USER}" "$0" "$@"
+    exit $?
+  fi
+fi
 
 [[ -r "$INDEX_HTML" ]] || rewrite_index_html
 update_projects_json
