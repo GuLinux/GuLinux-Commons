@@ -255,6 +255,7 @@ rewrite_index_html() {
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
     <script>
       var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
+      var status_icons_map = {"building": "\u25B6", "failure": "\u2718", "success": "\u2714"};
       var showTab = function(name) {
         $('.tabs-stack').hide();
         $('#' + name).show();
