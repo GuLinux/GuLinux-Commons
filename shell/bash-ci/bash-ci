@@ -347,11 +347,19 @@ rewrite_index_html() {
       var rowname=project.name + "_row";
       $(".projects").append("<tr id='" + rowname + "'></tr>");
       $(".projects-tabs").append('<li><a href="#' + tabname + '" data-toggle="tab">' + project.name + '</a></li>');
-      $("#" + rowname).html("<td><a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a></td><td>" + project.description + "</td><td id='" + project.name + "_build_started'/><td id='" + project.name + "_build_status'/>");
+      $("#" + rowname).html("\
+        <td>\
+          <a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a>\
+        </td>\
+        <td>" + project.description + "</td>\
+        <td id='" + project.name + "_build_started'/>\
+        <td><span id='" + project.name +"_build_status_icon'></span> <span id='" + project.name + "_build_status'></span></td>\
+        ");
       var show_status = function() {
         jQuery.getJSON( project.name + "/work/last_build", function(status){
           $('#' + project.name + '_build_status').html(status.status);
           $('#' + project.name + '_build_started').html(status.started);
+          $('#' + project.name + '_build_status_icon').html(status_icons_map[status.status]);
           $("#" + rowname).attr("class", status_colors_map[status.status]);
         });
       };
