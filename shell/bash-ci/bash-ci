@@ -194,7 +194,6 @@ update_project_json() {
 }
 
 build_project() {
-set -x
   local PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
   wait_lock
@@ -211,6 +210,7 @@ set -x
   build_started_time="$( date -Is )"
   update_project_json
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
+    echo "============================================================" | log
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
     set -o pipefail
     "$fname" 2>&1 | log
@@ -234,9 +234,8 @@ trigger_build() {
   local PROJECT_NAME="$1"
   build_id="$( date -Is )"
 
-  logfile="$( project_workdir )/build-${build_id}.log"
+  logfile="$( project_workdir )/build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
-  rm -f "$( project_workdir )/build.log"; ln -s "$logfile" "$( project_workdir )/build.log"
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
 
