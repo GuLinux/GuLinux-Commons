@@ -144,7 +144,7 @@ update_project_json() {
     split "$row"
     row_json="{\"id\": \"${SPLITTED[0]}\", \"started\": \"${SPLITTED[1]}\", \"finished\": \"${SPLITTED[2]}\", \"exit_code\": \"${SPLITTED[3]}\", \"status\": \"${SPLITTED[4]}\"}"
   }
-  sqlite3 "$( projectdb )" <<<"select id, started, finished, exit_code, status from builds ORDER BY id ASC LIMIT ${PROJECTS_HISTORY_LIMIT};" | while read row; do
+  sqlite3 "$( projectdb )" <<<"select id, started, finished, exit_code, status from builds ORDER BY id DESC LIMIT ${PROJECTS_HISTORY_LIMIT};" | while read row; do
     row2json
     echo -n "$sep${row_json}" >> "${project_history}"
     sep=","
@@ -230,15 +230,24 @@ rewrite_index_html() {
         $('#project-details-name').html(name);
         var update_project_history = function() {
           jQuery.getJSON( name + "/work/history", function(history){
-            for(var i = 0; i<history.length; i++) {
-              var item_id = 'build_' + history[i].id + '_status';
-              if($('#' + item_id).length == 0) {
-                $('<li><a href="#"><span id="' + item_id + '">' + history[i].started + '</span></a></li>')
+            for(var i = history.length-1; i>=0; i--) {
+              var item_status_id = 'build_' + history[i].id + '_status';
+              if($('#' + item_status_id).length == 0) {
+                $('<li data-build-id="' + history[i].id + '" class="build-item"><a href="#"><span id="' + item_status_id + '"><small>#' + history[i].id + ' ' + history[i].started + '</small></span></a></li>')
                   .prependTo('#project-details-history')
                   .click( {"id": history[i].id, "name": name}, tail_log);
               }
-              $('#' + item_id).attr("class", 'text-' + status_colors_map[history[i].status]);
+              $('#' + item_status_id).attr("class", 'text-' + status_colors_map[history[i].status]);
             }
+            $('.build-item').each(function(index, element){
+              var to_delete = true;
+              for(var i=0; i<history.length; i++) {
+                if($(element).data().buildId == history[i].id)
+                  to_delete = false;
+              }
+              if(to_delete)
+                $(element).remove();
+            });
           });
         };
         $('#project-details-history').empty();
