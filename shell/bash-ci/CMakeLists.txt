@@ -1,1 +1,1 @@
-install(PROGRAMS bashci DESTINATION bin)
+install(PROGRAMS bash-ci DESTINATION bin)
