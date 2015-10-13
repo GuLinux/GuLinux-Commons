@@ -68,7 +68,7 @@ git_init_repo() {
 }
 
 git_update_repo_command() {
- echo '( cd ${REPO_DIR} && git pull && git submodule update )'
+ echo -e "( cd \${REPO_DIR} && git pull && git submodule update; git log -n1 )"
 }
 
 update_projects_json() {
@@ -77,9 +77,14 @@ update_projects_json() {
   find "$PROJECTS_DIR" -name "bashci-project" | sort -n | while read fname; do
     . "$fname"
     echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_DIR/projects.json"
+    echo -en "{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" > "$(project_basedir)/project.json"
     sep=","
   done
   echo -en "]" >> "$PROJECTS_DIR/projects.json"
+}
+
+git_fetch_description() {
+  echo -e "\$(cat \"$@/.git/description\")"
 }
 
 
@@ -92,8 +97,8 @@ add_project() {
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
 PROJECT_NAME="$PROJECT_NAME"
-PROJECT_DESCRIPTION=""
 PROJECT_DIR="$( project_workdir )"
+PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
 REPO_DIR="$( project_repodir )"
 EOF
   sqlite3 "$(projectdb)" <<<"CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT);"
@@ -227,7 +232,10 @@ rewrite_index_html() {
         update_project_logs_timer = setInterval(function() {read_log(event.data.id, event.data.name); }, 1000);
       };
       var showProject = function(name) {
-        $('#project-details-name').html(name);
+        jQuery.getJSON( name + "/project.json", function(project){
+          $('#project-details-name').html(project.name);
+          $('#project-details-description').html(project.description);
+        });
         var update_project_history = function() {
           jQuery.getJSON( name + "/work/history", function(history){
             for(var i = history.length-1; i>=0; i--) {
@@ -274,7 +282,8 @@ rewrite_index_html() {
     </div>
     <div class="container-fluid tabs-stack" id="project-details" style="display: none">
       <div class="row">
-        <h3 id="project-details-name" class="col-xs-10"></h3>
+        <h3 id="project-details-name" class="col-xs-4"></h3>
+        <h4 id="project-details-description" class="col-xs-6"></h4>
         <div class="col-xs-2">
           <button id="back-to-dashboard" class="btn btn-primary pull-right" onclick="showDashboard();">Back to dashboard</button>
         </div>
