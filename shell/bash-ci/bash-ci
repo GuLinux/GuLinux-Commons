@@ -233,7 +233,10 @@ build_project() {
 trigger_build() {
   local PROJECT_NAME="$1"
   build_id="$( date -Is )"
-
+  if ! [[ -d "$( project_workdir )" ]]; then
+    echo "ERROR! Project $PROJECT_NAME doesn't exist" >&2
+    exit 1
+  fi
   logfile="$( project_workdir )/build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
