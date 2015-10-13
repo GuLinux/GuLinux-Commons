@@ -16,7 +16,9 @@ EDITOR="${EDITOR:-vim}"
 MAX_JOBS="${MAX_JOBS:-2}"
 PROJECTS_HISTORY_LIMIT="${PROJECTS_HISTORY_LIMIT:-20}"
 INDEX_HTML="$PROJECTS_DIR/index.html"
-PID_FILE_NAME="build.pid"
+PID_PATH_NAME="build.pid"
+PID_FILE_NAME="pidfile"
+PID_PATH_NAME="build.pid"
 SQLITE_FILE="project.db"
 BASHCI_USER="${BASHCI_USER:-$USER}"
 
@@ -35,7 +37,7 @@ project_buildfile() {
 }
 
 project_pidfile() {
-  echo "$( project_basedir )/$PID_FILE_NAME"
+  echo "$( project_basedir )/$PID_PATH_NAME"
 }
 
 project_lastbuild() {
@@ -57,10 +59,39 @@ projectdb() {
   echo "$( project_basedir)/$SQLITE_FILE"
 }
 
-queue_is_free() {
-set -x
-  [[ ! -r "$( project_pidfile )" && "$( find "$PROJECTS_DIR" -name "$PID_FILE_NAME" | wc -l )" -lt "$MAX_JOBS" ]]
-  set +x
+project_is_running() {
+  local PROJECT_NAME="$1"
+  [[ -r "$( project_pidfile )" ]]
+}
+lock_build() {
+  mkdir "$( project_pidfile )"
+}
+
+wait_lock() {
+  while ! lock_build; do sleep 1; done
+}
+
+unlock_build() {
+  rm -rf "$( project_pidfile )"
+}
+
+projects_builds_running() {
+  find "$PROJECTS_DIR" -name "$PID_PATH_NAME" | wc -l
+}
+
+wait_for_free_builders() {
+  while [[ "$( find "$PROJECTS_DIR" -path "*/$PID_PATH_NAME/${PID_FILE_NAME}" -not -path "$(project_basedir)/*" | wc -l )" -ge "$MAX_JOBS" ]]; do
+    sleep 1
+  done
+}
+
+wait_for_finished() {
+  local PROJECT_NAME="$1"
+  project_is_running "$PROJECT_NAME" && echo "Project ${PROJECT_NAME} already running, waiting for finished"
+  while project_is_running "$PROJECT_NAME"; do
+    echo -en "."
+    sleep 1
+  done
 }
 
 git_init_repo() {
@@ -90,14 +121,14 @@ git_fetch_description() {
 
 
 add_project() {
-  PROJECT_NAME="$1"
+  local PROJECT_NAME="$1"
   repo_type="$2"
   repo_url="$3"
   [ -z "$repo_url" ] && usage "add_project repo_name repo_type repo_url (repo type currently supported: git)"
   mkdir -p "$( project_workdir )"
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
-PROJECT_NAME="$PROJECT_NAME"
+local PROJECT_NAME="$PROJECT_NAME"
 PROJECT_DIR="$( project_workdir )"
 PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
 REPO_DIR="$( project_repodir )"
@@ -162,34 +193,44 @@ update_project_json() {
 }
 
 build_project() {
-  PROJECT_NAME="$1"; shift
+set -x
+  local PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
+  wait_lock
+  wait_for_free_builders
+  echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now')), 'building'); select last_insert_rowid();")"
   logfile="$(project_workdir)/${build_id}.log"
-  echo "Build id: $build_id" | tee -a "$logfile"
-  while ! queue_is_free; do sleep 1; done
-  echo "$BASHPID" > "$(project_pidfile)"
+  : > "$logfile"
+  log() {
+    tee -a "$logfile"
+  }
+  echo "Build id: $build_id" | log
+
   build_started_time="$( date -Is )"
   update_project_json
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
+    echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
     set -o pipefail
-    echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | tee -a "$logfile"
-    "$fname" | tee -a "$logfile" || exit $?
-#     local exit_code="${PIPESTATUS[0]}"
-#     [[ "$exit_code" != 0 ]] && exit "${exit_code}"
+    "$fname" | log
+    exit_code="$?"
+    if [[ "$exit_code" != 0 ]]; then
+      unlock_build
+      exit $exit_code
+    fi
   done
   local exit_code="$?"
   [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
   sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
-  echo "$(date -Is) - Build finished: $build_status ($exit_code)" | tee -a "$logfile"
+  echo "$(date -Is) - Build finished: $build_status ($exit_code)" | log
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
   update_project_json
-  rm -f "$( project_pidfile)"
+  unlock_build
   exit "${exit_code}"
 }
 
 trigger_build() {
-  PROJECT_NAME="$1"
+  local PROJECT_NAME="$1"
   build_id="$( date -Is )"
 
   logfile="$( project_workdir )/build-${build_id}.log"
