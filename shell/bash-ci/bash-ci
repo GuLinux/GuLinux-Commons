@@ -129,7 +129,7 @@ add_project() {
   mkdir -p "$( project_workdir )"
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
-local PROJECT_NAME="$PROJECT_NAME"
+PROJECT_NAME="$PROJECT_NAME"
 PROJECT_DIR="$( project_workdir )"
 PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
 REPO_DIR="$( project_repodir )"
