@@ -213,7 +213,7 @@ set -x
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
     set -o pipefail
-    "$fname" | log
+    "$fname" 2>&1 | log
     exit_code="$?"
     if [[ "$exit_code" != 0 ]]; then
       unlock_build
