@@ -14,6 +14,7 @@ usage() {
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 EDITOR="${EDITOR:-vim}"
 MAX_JOBS="${MAX_JOBS:-2}"
+PROJECTS_HISTORY_LIMIT="${PROJECTS_HISTORY_LIMIT:-20}"
 INDEX_HTML="$PROJECTS_DIR/index.html"
 PID_FILE_NAME="build.pid"
 SQLITE_FILE="project.db"
@@ -38,6 +39,9 @@ project_pidfile() {
 
 project_lastbuild() {
   echo "$( project_workdir)/last_build"
+}
+project_history() {
+  echo "$( project_workdir)/history"
 }
 
 project_repodir() {
@@ -128,27 +132,54 @@ EOF
   update_projects_json
 }
 
+split() {
+  IFS="|" read -ra SPLITTED <<<"$@"
+}
+
+update_project_json() {
+  local project_history="$( project_history )"
+  local project_lastbuild="$( project_lastbuild )"
+  echo -n "[" > "$( project_history )"
+  row2json() {
+    split "$row"
+    row_json="{\"id\": \"${SPLITTED[0]}\", \"started\": \"${SPLITTED[1]}\", \"finished\": \"${SPLITTED[2]}\", \"exit_code\": \"${SPLITTED[3]}\", \"status\": \"${SPLITTED[4]}\"}"
+  }
+  sqlite3 "$( projectdb )" <<<"select id, started, finished, exit_code, status from builds ORDER BY id DESC LIMIT ${PROJECTS_HISTORY_LIMIT};" | while read row; do
+    row2json
+    echo -n "$sep${row_json}" >> "${project_history}"
+    sep=","
+  done
+  row="$( sqlite3 "$( projectdb )" <<<"select id, started, finished, exit_code, status from builds ORDER BY id DESC LIMIT 1;" )"
+  row2json
+  echo -n "$row_json" > "$project_lastbuild"
+  echo -n "]" >> "${project_history}"
+}
+
 build_project() {
   PROJECT_NAME="$1"; shift
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
   build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now')), 'building'); select last_insert_rowid();")"
-  echo "Build id: $build_id"
+  logfile="$(project_workdir)/${build_id}.log"
+  echo "Build id: $build_id" | tee -a "$logfile"
   while ! queue_is_free; do sleep 1; done
   echo "$BASHPID" > "$(project_pidfile)"
   build_started_time="$( date -Is )"
-  echo "{\"status_name\":\"building\",\"started\":\"$build_started_time\"}" > "$(project_lastbuild)"
+  update_project_json
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
-    echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" >&2
-    "$fname" || exit 1
+    set -o pipefail
+    echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | tee -a "$logfile"
+    "$fname" | tee -a "$logfile" || exit $?
+#     local exit_code="${PIPESTATUS[0]}"
+#     [[ "$exit_code" != 0 ]] && exit "${exit_code}"
   done
-  status_code="$?"
-  [[ "${status_code}" == 0 ]] && build_status="success" || build_status="failure"
-  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now')), exit_code=$status_code, status='$build_status' WHERE id = $build_id;"
-  echo "$(date -Is) - Build finished: $build_status ($status_code)" >&2
+  local exit_code="$?"
+  [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
+  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
+  echo "$(date -Is) - Build finished: $build_status ($exit_code)" | tee -a "$logfile"
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
-  echo "{\"exit_status\":$status_code,\"status_name\":\"$build_status\",\"started\":\"$build_started_time\",\"ended\":\"$(date -Is)\"}" > "$( project_lastbuild)"
+  update_project_json
   rm -f "$( project_pidfile)"
-  exit "${status_code}"
+  exit "${exit_code}"
 }
 
 trigger_build() {
@@ -163,7 +194,7 @@ trigger_build() {
 
 rewrite_index_html() {
   rm -f "$INDEX_HTML"
-  cat > "$INDEX_HTML" <<EOF
+  cat > "$INDEX_HTML" <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -192,7 +223,7 @@ rewrite_index_html() {
       <div class="tab-content projects-tabs-content">
         <div class="tab-pane active" id="home">
           <table class="table projects table-bordered">
-            <tr><th>Project</th><th>Description</th><th>Status</th></tr>
+            <tr><th>Project</th><th>Description</th><th>Last Build</th><th>Status</th></tr>
           </table>
         </div>
       </div>
@@ -200,15 +231,38 @@ rewrite_index_html() {
   </body>
   <script>
     var status_colors_map = {"building": "info", "failure": "danger", "success": "success"};
+    var read_log = function(data) {
+        console.log(data.data);
+        jQuery.get( data.data.name + "/work/" + data.data.id + ".log", function(log){
+            $('#' + data.data.div_id).html('<pre>' + log + '</pre>');
+        });
+    }
+    var add_project_tab = function(name, tab) {
+        $('#' + tab).html('<div class="container-fluid"><ul class="nav nav-pills nav-stacked builds col-xs-2" id="' + name + '_builds"></ul> \
+        <div class="col-xs-10" id="' + name + '_logs">foo bla bar</div></div>');
+        var updateInterval = setInterval(function(){
+             jQuery.getJSON( name + "/work/history", function(history){
+                $('#' + name + '_builds').empty();
+                for(var i = 0; i<history.length; i++) {
+                  $('<li><a href="#"><span class="text-' + status_colors_map[history[i].status] + '">' + history[i].started + '</span></a></li>').appendTo('#' + name + '_builds')
+                    .click( {"id": history[i].id, "name": name, "div_id": name + '_logs'}, read_log);
+                }
+             });
+        }, 1000);
+    }
     var add_project = function(project) {
-      \$(".projects").append("<tr id='" + project.name + "_row'></tr>");
-      \$(".projects-tabs").append('<li><a href="#project_' + project.name + '" data-toggle="tab">' + project.name + '</a></li>');
-      \$(".projects-tabs-content").append('<div class="tab-pane" id="project_' + project.name + '"></div>');
-      \$("#" + project.name + "_row").html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_status'></td>");
+      var tabname=project.name + "_tab";
+      var rowname=project.name + "_row";
+      $(".projects").append("<tr id='" + rowname + "'></tr>");
+      $(".projects-tabs").append('<li><a href="#' + tabname + '" data-toggle="tab">' + project.name + '</a></li>');
+      $(".projects-tabs-content").append('<div class="tab-pane" id="' + tabname + '"></div>');
+      add_project_tab(project.name, tabname);
+      $("#" + rowname).html("<td>" + project.name + "</td><td>" + project.description + "</td><td id='" + project.name + "_build_started'/><td id='" + project.name + "_build_status'/>");
       window.setInterval(function() {
         jQuery.getJSON( project.name + "/work/last_build", function(status){
-          \$('#' + project.name + '_build_status').html(status.status_name);
-          \$("#" + project.name + "_row").attr("class", status_colors_map[status.status_name]);
+          $('#' + project.name + '_build_status').html(status.status);
+          $('#' + project.name + '_build_started').html(status.started);
+          $("#" + rowname).attr("class", status_colors_map[status.status]);
         });
       }, 1000);
     }
@@ -225,4 +279,4 @@ EOF
 [[ -r "$INDEX_HTML" ]] || rewrite_index_html
 update_projects_json
 
-if [[ -n "$1" && "$( type -t "$1" )" == "function" ]]; then "$@"; else usage; fi
+if [[ -n "$1" && "$1" != "--help" && "$( type -t "$1" )" == "function" ]]; then "$@"; else usage; fi
