@@ -299,13 +299,16 @@ rewrite_index_html() {
       var update_project_history_timer = false;
       var update_project_logs_timer = false;
       
+      var scrollTo = function(position) {
+        \$("html, body").animate({ scrollTop: position }, "slow");
+      }
       
       var read_log = function(id, name) {
           jQuery.get( name + "/work/" + id + ".log", function(log){
               \$('#project-details-build-log').text(log);
           });
           if(following_logs) {
-            \$("html, body").animate({ scrollTop: \$(document).height() }, "slow");
+            scrollTo( \$(document).height());
           }
       };
       var tail_log = function(event) {
@@ -395,10 +398,15 @@ rewrite_index_html() {
     };
     
     var following_logs = false;
-    var follow_logs = function(follow) {
-      \$('#unfollow_logs').toggle(follow);
-      \$('#follow_logs').toggle(!follow);
-      following_logs = follow;
+    var toggle_follow_logs = function() {
+      following_logs = !following_logs;
+      if(following_logs) {
+        \$('#follow_logs').addClass("active");
+        \$('#scroll_top').attr("disabled", "disabled");
+      } else {
+        \$('#follow_logs').removeClass("active");
+        \$('#scroll_top').removeAttr("disabled");
+      }
     };    
     
     load_projects();
@@ -429,8 +437,10 @@ rewrite_index_html() {
       <div class="row">
         <div class="col-xs-2">
           <ul id="project-details-history" class="builds-list"></ul>
-          <button id="follow_logs" class="btn btn-info btn-xs" style="position: fixed; bottom: 20px;" onclick="follow_logs(true);">Follow Logs</button>
-          <button id="unfollow_logs" class="btn btn-info btn-xs" style="display: none; position: fixed; bottom: 20px;" onclick="follow_logs(false);">Stop Following Logs</button>
+          <div style="position: fixed; bottom: 20px;" class="btn-group">
+            <button id="scroll_top" class="btn btn-info btn-xs" onclick="if(!following_logs) scrollTo(0);">Up</button>
+            <button id="follow_logs" class="btn btn-info btn-xs" onclick="toggle_follow_logs();">Follow Logs</button>
+          </div>
         </div>
         <div class="col-xs-10"><pre id="project-details-build-log"></pre><a name="logs-bottom" /></div>
       </div>
