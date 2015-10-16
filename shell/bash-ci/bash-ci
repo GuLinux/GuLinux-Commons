@@ -240,6 +240,7 @@ build_project() {
 
 trigger_build() {
   local PROJECT_NAME="$1"
+  [[ -z "$PROJECT_NAME" ]] && usage "trigger_build project-name"
   build_id="$( date -Is )"
   if ! [[ -d "$( project_workdir )" ]]; then
     echo "ERROR! Project $PROJECT_NAME doesn't exist" >&2
@@ -303,6 +304,9 @@ rewrite_index_html() {
           jQuery.get( name + "/work/" + id + ".log", function(log){
               \$('#project-details-build-log').text(log);
           });
+          if(following_logs) {
+            \$("html, body").animate({ scrollTop: \$(document).height() }, "slow");
+          }
       };
       var tail_log = function(event) {
         clearInterval(update_project_logs_timer);
@@ -382,7 +386,6 @@ rewrite_index_html() {
           for(var i = 0; i <projects.length; i++) {
             present |= projects[i].name == project;
           }
-          console.log("Project " + project + " is present: " + present);
           if(! present) {
             \$('#' + project + '_row').remove();
             delete loaded_projects[project];
@@ -390,6 +393,14 @@ rewrite_index_html() {
         }
       });
     };
+    
+    var following_logs = false;
+    var follow_logs = function(follow) {
+      \$('#unfollow_logs').toggle(follow);
+      \$('#follow_logs').toggle(!follow);
+      following_logs = follow;
+    };    
+    
     load_projects();
     window.setInterval(load_projects, 1500);
     </script>
@@ -416,8 +427,12 @@ rewrite_index_html() {
         <h4 class="col-xs-10">Logs</h4>
       </div>
       <div class="row">
-        <div class="col-xs-2"><ul id="project-details-history" class="builds-list"></ul></div>
-        <div class="col-xs-10"><pre id="project-details-build-log"></pre></div>
+        <div class="col-xs-2">
+          <ul id="project-details-history" class="builds-list"></ul>
+          <button id="follow_logs" class="btn btn-info btn-xs" style="position: fixed; bottom: 20px;" onclick="follow_logs(true);">Follow Logs</button>
+          <button id="unfollow_logs" class="btn btn-info btn-xs" style="display: none; position: fixed; bottom: 20px;" onclick="follow_logs(false);">Stop Following Logs</button>
+        </div>
+        <div class="col-xs-10"><pre id="project-details-build-log"></pre><a name="logs-bottom" /></div>
       </div>
     </div>
   </body>
