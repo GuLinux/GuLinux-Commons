@@ -6,7 +6,7 @@ APPNAME="$( basename "$0")"
 
 usage() {
   echo "Usage: $0 function" >&2
-  echo "Functions: add_project trigger_build rewrite_index_html" >&2
+  echo "Functions: add_project trigger_build rewrite_index_html remove_project" >&2
   echo "$@" >&2
   exit 1
 }
@@ -120,12 +120,20 @@ git_fetch_description() {
   echo -e "\$(cat \"$@/.git/description\")"
 }
 
+remove_project() {
+  local PROJECT_NAME="$1"
+  [ -z "$PROJECT_NAME" ] && usage "remove_project project_name"
+  read -ep "About to remove project $PROJECT_NAME. Are you sure? [y/n] " -n1 sure
+  [[ "$sure" != "y" ]] && return 1
+  rm -rf "$( project_basedir )"
+  update_projects_json
+}
 
 add_project() {
   local PROJECT_NAME="$1"
   repo_type="$2"
   repo_url="$3"
-  [ -z "$repo_url" ] && usage "add_project repo_name repo_type repo_url (repo type currently supported: git)"
+  [ -z "$repo_url" ] && usage "add_project project_name repo_type repo_url (repo type currently supported: git)"
   mkdir -p "$( project_workdir )"
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
@@ -340,6 +348,50 @@ rewrite_index_html() {
         clearInterval(update_project_logs_timer);
         showTab('dashboard');
       };
+      var loaded_projects = {};
+      var add_project = function(project) {
+      var tabname=project.name + "_tab";
+      var rowname=project.name + "_row";
+      \$(".projects").append("<tr id='" + rowname + "'></tr>");
+      \$("#" + rowname).html("\
+        <td>\
+          <a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a>\
+        </td>\
+        <td>" + project.description + "</td>\
+        <td id='" + project.name + "_build_started'/>\
+        <td><span id='" + project.name +"_dash_status'></span></td>\
+        ");
+      var show_status = function() {
+        jQuery.getJSON( project.name + "/work/last_build", function(status){
+          \$('#' + project.name + '_dash_status').html(status.status).attr("class", "build-" + status.status);
+          \$('#' + project.name + '_build_started').html(status.started);
+        });
+      };
+      show_status();
+      project['timer'] = window.setInterval(show_status, 1000);
+      loaded_projects[project.name] = project;
+    }
+    var load_projects = function() {
+      jQuery.getJSON("projects.json", function(projects){
+        for(var i=0; i<projects.length; i++){
+          if(loaded_projects[projects[i].name] == undefined)
+            add_project(projects[i]);
+        }
+        for(var project in loaded_projects) {
+          var present = false;
+          for(var i = 0; i <projects.length; i++) {
+            present |= projects[i].name == project;
+          }
+          console.log("Project " + project + " is present: " + present);
+          if(! present) {
+            \$('#' + project + '_row').remove();
+            delete loaded_projects[project];
+          }
+        }
+      });
+    };
+    load_projects();
+    window.setInterval(load_projects, 1500);
     </script>
   </head>
   <body>
@@ -369,35 +421,6 @@ rewrite_index_html() {
       </div>
     </div>
   </body>
-  <script>
-    var add_project = function(project) {
-      var tabname=project.name + "_tab";
-      var rowname=project.name + "_row";
-      \$(".projects").append("<tr id='" + rowname + "'></tr>");
-      \$(".projects-tabs").append('<li><a href="#' + tabname + '" data-toggle="tab">' + project.name + '</a></li>');
-      \$("#" + rowname).html("\
-        <td>\
-          <a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a>\
-        </td>\
-        <td>" + project.description + "</td>\
-        <td id='" + project.name + "_build_started'/>\
-        <td><span id='" + project.name +"_dash_status'></span></td>\
-        ");
-      var show_status = function() {
-        jQuery.getJSON( project.name + "/work/last_build", function(status){
-          \$('#' + project.name + '_dash_status').html(status.status).attr("class", "build-" + status.status);
-          \$('#' + project.name + '_build_started').html(status.started);
-        });
-      };
-      show_status();
-      window.setInterval(show_status, 1000);
-    }
-    jQuery.getJSON("projects.json", function(projects){
-        for(var i=0; i<projects.length; i++){
-            add_project(projects[i]);
-        }
-    });
-  </script>
 </html>
 EOF
 }
@@ -411,6 +434,10 @@ if [[ "$1" == sudo ]]; then
 fi
 
 [[ -r "$INDEX_HTML" ]] || rewrite_index_html
-update_projects_json
 
-if [[ -n "$1" && "$1" != "--help" && "$( type -t "$1" )" == "function" ]]; then "$@"; else usage; fi
+if [[ -n "$1" && "$1" != "--help" && "$( type -t "$1" )" == "function" ]]; then
+    update_projects_json
+    "$@"
+else
+    usage
+fi
