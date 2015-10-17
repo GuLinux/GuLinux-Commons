@@ -8,6 +8,7 @@ set(Wt_Commons_Library_SRCS
   wtr.cpp
   whtmltemplateslocalizedstrings.cpp
   cookieslawdisclaimer.cpp
+  wserverconfigurationreader.cpp
 )
 set(HAVE_WT_JSON_SERIALIZE Off CACHE BOOL "Build with Wt JSON serialize support (Default: Off)")
 if(HAVE_WT_JSON_SERIALIZE)
