@@ -438,8 +438,8 @@ rewrite_index_html() {
         <div class="col-xs-2">
           <ul id="project-details-history" class="builds-list"></ul>
           <div style="position: fixed; bottom: 20px;" class="btn-group">
-            <button id="scroll_top" class="btn btn-info btn-xs" onclick="if(!following_logs) scrollTo(0);">Up</button>
-            <button id="follow_logs" class="btn btn-info btn-xs" onclick="toggle_follow_logs();">Follow Logs</button>
+            <button id="scroll_top" class="btn btn-info btn-xs" onclick="if(!following_logs) scrollTo(0);">&#x2191; Up</button>
+            <button id="follow_logs" class="btn btn-info btn-xs" onclick="toggle_follow_logs();">&#x2193; Follow Logs</button>
           </div>
         </div>
         <div class="col-xs-10"><pre id="project-details-build-log"></pre><a name="logs-bottom" /></div>
