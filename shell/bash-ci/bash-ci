@@ -283,12 +283,7 @@ rewrite_index_html() {
         .build-success:before, .build-failure:before, .build-building:before {
           padding-right: 5px;
         }
-        .builds-list {
-          list-style: none;
-          margin-left: 0;
-          padding-left: 0;
-        }
-        .builds-list .build-success, .builds-list .build-failure, .builds-list .build-building {
+        li .build-success, li .build-failure, li .build-building {
           padding-left: 1em;
           text-indent: -1em;
         }
@@ -438,7 +433,7 @@ rewrite_index_html() {
       </div>
       <div class="row">
         <div class="col-xs-2">
-          <ul id="project-details-history" class="builds-list"></ul>
+          <ul id="project-details-history" class="list-unstyled"></ul>
           <div style="position: fixed; bottom: 20px;" class="btn-group">
             <button id="scroll_top" class="btn btn-info btn-xs" onclick="follow_logs(false); scrollTo(0);">&#x2191; Up</button>
             <button id="follow_logs" class="btn btn-info btn-xs" onclick="follow_logs(!following_logs);">&#x2193; Follow Logs</button>
