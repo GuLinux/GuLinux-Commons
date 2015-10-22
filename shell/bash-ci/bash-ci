@@ -314,6 +314,8 @@ rewrite_index_html() {
           }
       };
       var tail_log = function(event) {
+        \$('.build-item').removeClass('bg-info');
+        \$(".build-item[data-build-id='" + event.data.id + "']").addClass('bg-info');
         clearInterval(update_project_logs_timer);
         read_log(event.data.id, event.data.name);
         update_project_logs_timer = setInterval(function() {read_log(event.data.id, event.data.name); }, 1000);
