@@ -298,12 +298,21 @@ rewrite_index() {
       };
       var update_project_history_timer = false;
       var update_project_logs_timer = false;
+      var project_history;
       
       var scrollTo = function(position) {
         \$("html, body").animate({ scrollTop: position }, "slow");
       }
       
       var read_log = function(id, name) {
+          var build_status = project_history.find(function(e) { return e.id == id; });
+          if(build_status != undefined) {
+            \$('#build-current-status').html(build_status.status);
+            \$('#build-current-started').html(build_status.started);
+            \$('#build-current-finished').toggle(build_status.finished.length > 0);
+            \$('#build-current-finished-time').html(build_status.finished);
+            \$('#build-status-details').attr('class', 'build-' + build_status.status);
+          }
           jQuery.get( name + "/" + id + "/build.log", function(log){
               \$('#project-details-build-log').text(log);
           });
@@ -311,26 +320,35 @@ rewrite_index() {
             scrollTo( \$(document).height());
           }
       };
-      var tail_log = function(event) {
+      var display_build = function(event) {
+        var id = event.data.id;
+        var name = event.data.name;
+        \$('#build-title').html("Build #" + id);
+        \$('.build-details').show();
+        tail_log(id, name);
+      };
+      var tail_log = function(id, name) {
         \$('.build-item').removeClass('bg-info');
-        \$(".build-item[data-build-id='" + event.data.id + "']").addClass('bg-info');
+        \$(".build-item[data-build-id='" + id + "']").addClass('bg-info');
         clearInterval(update_project_logs_timer);
-        read_log(event.data.id, event.data.name);
-        update_project_logs_timer = setInterval(function() {read_log(event.data.id, event.data.name); }, 1000);
+        read_log(id, name);
+        update_project_logs_timer = setInterval(function() {read_log(id, name); }, 1000);
       };
       var showProject = function(name) {
         jQuery.getJSON( name + "/project.json", function(project){
           \$('#project-details-name').html(project.name);
           \$('#project-details-description').html(project.description);
+          \$('.build-details').hide();
         });
         var update_project_history = function() {
           jQuery.getJSON( name + "/history.json", function(history){
+            project_history = history;
             for(var i = history.length-1; i>=0; i--) {
               var item_status_id = 'build_' + history[i].id + '_status';
               if(\$('#' + item_status_id).length == 0) {
                 \$('<li data-build-id="' + history[i].id + '" class="build-item"><a href="#"><span id="' + item_status_id + '"><small>#' + history[i].id + ' ' + history[i].started + '</small></span></a></li>')
                   .prependTo('#project-details-history')
-                  .click( {"id": history[i].id, "name": name}, tail_log);
+                  .click( {"id": history[i].id, "name": name}, display_build);
               }
               \$('#' + item_status_id).attr("class", 'build-' + history[i].status);
             }
@@ -432,7 +450,7 @@ rewrite_index() {
       </div>
       <div class="row">
         <h4 class="col-xs-2">History</h4>
-        <h4 class="col-xs-10">Logs</h4>
+        <h4 class="col-xs-10 build-details" id="build-title"></h4>
       </div>
       <div class="row">
         <div class="col-xs-2">
@@ -442,7 +460,11 @@ rewrite_index() {
             <button id="follow_logs" class="btn btn-info btn-xs" onclick="follow_logs(!following_logs);">&#x2193; Follow Logs</button>
           </div>
         </div>
-        <div class="col-xs-10"><pre id="project-details-build-log"></pre><a name="logs-bottom" /></div>
+        <div class="col-xs-10 build-details">
+          <h5 id="build-status-details">Status: <span id="build-current-status"></span>, started: <span id="build-current-started"></span><span id="build-current-finished">, finished: <span id="build-current-finished-time"></span></span></h5>
+          <h5>Logs</h5>
+          <pre id="project-details-build-log"></pre><a name="logs-bottom" />
+        </div>
       </div>
     </div>
   </body>
