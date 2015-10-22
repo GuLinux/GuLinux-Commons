@@ -179,6 +179,7 @@ bashci_failure_trigger() {
 EOF
   $EDITOR "$( project_buildfile )"
   update_projects_json
+  echo '{ "status": "new" }' > "$( project_lastbuild )"
 }
 
 split() {
@@ -211,7 +212,8 @@ build_project() {
   wait_for_free_builders
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
-  logfile="$(project_basedir web)/${build_id}.log"
+  mkdir -p "$(project_basedir web)/${build_id}"
+  logfile="$(project_basedir web)/${build_id}/build.log"
   : > "$logfile"
   log() {
     tee -a "$logfile"
@@ -302,7 +304,7 @@ rewrite_index() {
       }
       
       var read_log = function(id, name) {
-          jQuery.get( name + "/" + id + ".log", function(log){
+          jQuery.get( name + "/" + id + "/build.log", function(log){
               \$('#project-details-build-log').text(log);
           });
           if(following_logs) {
