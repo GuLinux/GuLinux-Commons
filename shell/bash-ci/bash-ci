@@ -12,25 +12,27 @@ usage() {
 }
 
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
+WEB_DIR="${WEB_DIR:-$PROJECTS_DIR/web}"
 EDITOR="${EDITOR:-vim}"
 MAX_JOBS="${MAX_JOBS:-2}"
 PROJECTS_HISTORY_LIMIT="${PROJECTS_HISTORY_LIMIT:-20}"
-INDEX_HTML="$PROJECTS_DIR/index.html"
+INDEX_HTML="$WEB_DIR/index.html"
 PID_PATH_NAME="build.pid"
 PID_FILE_NAME="pidfile"
-PID_PATH_NAME="build.pid"
 SQLITE_FILE="project.db"
 BASHCI_USER="${BASHCI_USER:-$USER}"
 BASHCI_TITLE="${BASHCI_TITLE:-Bash-CI Continuous Integration Dashboard}"
 
-mkdir -p "${PROJECTS_DIR}"
+PROJECTS_JSON="$WEB_DIR/projects.json"
+
+mkdir -p "${PROJECTS_DIR}" "${WEB_DIR}"
 
 project_basedir() {
-  echo "${PROJECTS_DIR}/${PROJECT_NAME}"
+  [[ "$1" == "web" ]] && echo "${WEB_DIR}/${PROJECT_NAME}" || echo "${PROJECTS_DIR}/${PROJECT_NAME}"
 }
 
 project_workdir() {
-  echo "$( project_basedir )/work"
+  echo "$( project_basedir "$@" )/work"
 }
 
 project_buildfile() {
@@ -42,10 +44,10 @@ project_pidfile() {
 }
 
 project_lastbuild() {
-  echo "$( project_workdir)/last_build"
+  echo "$( project_basedir web)/status.json"
 }
 project_history() {
-  echo "$( project_workdir)/history"
+  echo "$( project_basedir web )/history.json"
 }
 
 project_repodir() {
@@ -106,14 +108,14 @@ git_update_repo_command() {
 
 update_projects_json() {
   sep=""
-  echo -en "[" > "$PROJECTS_DIR/projects.json"
+  echo -en "[" > "$PROJECTS_JSON"
   find "$PROJECTS_DIR" -name "bashci-project" | sort -n | while read fname; do
     . "$fname"
-    echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_DIR/projects.json"
-    echo -en "{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" > "$(project_basedir)/project.json"
+    echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_JSON"
+    echo -en "{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" > "$(project_basedir web)/project.json"
     sep=","
   done
-  echo -en "]" >> "$PROJECTS_DIR/projects.json"
+  echo -en "]" >> "$PROJECTS_JSON"
 }
 
 git_fetch_description() {
@@ -125,7 +127,7 @@ remove_project() {
   [ -z "$PROJECT_NAME" ] && usage "remove_project project_name"
   read -ep "About to remove project $PROJECT_NAME. Are you sure? [y/n] " -n1 sure
   [[ "$sure" != "y" ]] && return 1
-  rm -rf "$( project_basedir )"
+  rm -rf "$( project_basedir )" "$( project_basedir web )"
   update_projects_json
 }
 
@@ -134,7 +136,7 @@ add_project() {
   repo_type="$2"
   repo_url="$3"
   [ -z "$repo_url" ] && usage "add_project project_name repo_type repo_url (repo type currently supported: git)"
-  mkdir -p "$( project_workdir )"
+  mkdir -p "$( project_workdir )" "$( project_basedir web )"
   "${repo_type}_init_repo" "$repo_url"
   cat >"$( projectfile )" <<EOF
 PROJECT_NAME="$PROJECT_NAME"
@@ -208,7 +210,7 @@ build_project() {
   wait_for_free_builders
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
-  logfile="$(project_workdir)/${build_id}.log"
+  logfile="$(project_basedir web)/${build_id}.log"
   : > "$logfile"
   log() {
     tee -a "$logfile"
@@ -304,7 +306,7 @@ rewrite_index_html() {
       }
       
       var read_log = function(id, name) {
-          jQuery.get( name + "/work/" + id + ".log", function(log){
+          jQuery.get( name + "/" + id + ".log", function(log){
               \$('#project-details-build-log').text(log);
           });
           if(following_logs) {
@@ -322,7 +324,7 @@ rewrite_index_html() {
           \$('#project-details-description').html(project.description);
         });
         var update_project_history = function() {
-          jQuery.getJSON( name + "/work/history", function(history){
+          jQuery.getJSON( name + "/history.json", function(history){
             for(var i = history.length-1; i>=0; i--) {
               var item_status_id = 'build_' + history[i].id + '_status';
               if(\$('#' + item_status_id).length == 0) {
@@ -369,7 +371,7 @@ rewrite_index_html() {
         <td><span id='" + project.name +"_dash_status'></span></td>\
         ");
       var show_status = function() {
-        jQuery.getJSON( project.name + "/work/last_build", function(status){
+        jQuery.getJSON( project.name + "/status.json", function(status){
           \$('#' + project.name + '_dash_status').html(status.status).attr("class", "build-" + status.status);
           \$('#' + project.name + '_build_started').html(status.started);
         });
