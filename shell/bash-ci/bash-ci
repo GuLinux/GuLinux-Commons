@@ -6,8 +6,9 @@ APPNAME="$( basename "$0")"
 
 usage() {
   echo "Usage: $0 function" >&2
-  echo "Functions: add_project trigger_build rewrite_index_html remove_project" >&2
+  echo "Functions: add_project trigger_build rewrite_index remove_project" >&2
   echo "$@" >&2
+  echo
   exit 1
 }
 
@@ -253,7 +254,7 @@ trigger_build() {
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
 
-rewrite_index_html() {
+rewrite_index() {
   rm -f "$INDEX_HTML"
   cat > "$INDEX_HTML" <<EOF
 <!DOCTYPE html>
@@ -455,7 +456,7 @@ if [[ "$1" == sudo ]]; then
   fi
 fi
 
-[[ -r "$INDEX_HTML" ]] || rewrite_index_html
+[[ -r "$INDEX_HTML" ]] || rewrite_index
 
 if [[ -n "$1" && "$1" != "--help" && "$( type -t "$1" )" == "function" ]]; then
     update_projects_json
