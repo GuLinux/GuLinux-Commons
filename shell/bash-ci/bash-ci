@@ -23,10 +23,13 @@ PID_FILE_NAME="pidfile"
 SQLITE_FILE="project.db"
 BASHCI_USER="${BASHCI_USER:-$USER}"
 BASHCI_TITLE="${BASHCI_TITLE:-Bash-CI Continuous Integration Dashboard}"
+ENABLE_TRIGGER_BUILD="${ENABLE_TRIGGER_BUILD:-true}"
+[[ "$ENABLE_TRIGGER_BUILD" == true ]] && TRIGGER_BUILD_URL="${TRIGGER_BUILD_URL:-cgi-bin/bash-ci}" || TRIGGER_BUILD_URL=""
 
 PROJECTS_JSON="$WEB_DIR/projects.json"
 
-mkdir -p "${PROJECTS_DIR}" "${WEB_DIR}"
+mkdir -p "${PROJECTS_DIR}" "${WEB_DIR}/cgi-bin"
+ln -sf "$( readlink -f "$0" )" "${WEB_DIR}/cgi-bin"
 
 project_basedir() {
   [[ "$1" == "web" ]] && echo "${WEB_DIR}/${PROJECT_NAME}" || echo "${PROJECTS_DIR}/${PROJECT_NAME}"
@@ -95,12 +98,25 @@ wait_for_finished() {
 }
 
 git_init_repo() {
+  [[ -d "$( project_repodir )/.git" ]] && return 0
   git clone "$1" "$(project_repodir)"
   ( cd "$(project_repodir)" && git submodule init )
 }
 
-git_update_repo_command() {
- echo -e "( cd \${REPO_DIR} && git pull && git submodule update; git log -n1 )"
+git_update_repo() {
+ (cd ${REPO_DIR} && git pull && git submodule update )
+}
+
+git_commit_id() {
+ (cd ${REPO_DIR} && git rev-parse HEAD )
+}
+
+git_changes() {
+  if [[ -z "$PREVIOUS_COMMIT_ID" ]] ; then
+    (cd ${REPO_DIR} && git log)
+  else
+    (cd ${REPO_DIR} && git log "$PREVIOUS_COMMIT_ID".."$COMMIT_ID")
+  fi
 }
 
 update_projects_json() {
@@ -115,10 +131,6 @@ update_projects_json() {
   echo -en "]" >> "$PROJECTS_JSON"
 }
 
-git_fetch_description() {
-  echo -e "\$(cat \"$@/.git/description\")"
-}
-
 remove_project() {
   local PROJECT_NAME="$1"
   [ -z "$PROJECT_NAME" ] && usage "remove_project project_name"
@@ -128,35 +140,34 @@ remove_project() {
   update_projects_json
 }
 
+sql_project() {
+  sqlite3 "$(projectdb)" <<<"$@"
+}
+
 add_project() {
   local PROJECT_NAME="$1"
   repo_type="$2"
   repo_url="$3"
-  [ -z "$repo_url" ] && usage "add_project project_name repo_type repo_url (repo type currently supported: git)"
+  [ -z "$repo_url" ] && usage "add_project project_name repo_type repo_url [description] (repo type currently supported: git)"
   mkdir -p "$( project_workdir )" "$( project_basedir web )"
-  "${repo_type}_init_repo" "$repo_url"
-  sqlite3 "$(projectdb)" <<<"CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT);"
-  sqlite3 "$(projectdb)" <<<"CREATE TABLE artifacts(id integer primary key not null, build_id integer not null, name TEXT NOT NULL, path TEXT NOT NULL);"
+  sql_project "CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT, commit_id TEXT);"
+  sql_project "CREATE TABLE artifacts(id integer primary key not null, build_id integer not null, name TEXT NOT NULL, path TEXT NOT NULL);"
   cat >"$( project_buildfile )" <<EOF
 #!/bin/bash
 PROJECT_NAME="$PROJECT_NAME"
 PROJECT_WORKDIR="$( project_workdir )"
-PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
+PROJECT_DESCRIPTION="$4"
 REPO_DIR="$( project_repodir )"
+REPO_URL="$repo_url"
+REPO_TYPE="$repo_type"
 
 ## $PROJECT_NAME build file. Tweak it and add build options to make it automatically run.
 ## Available environment variables: PROJECTS_DIR PROJECT_NAME PROJECT_DESCRIPTION REPO_DIR
 ## You can also parse arguments in "\$@" before starting any build, for instance to set a working branch.
 
-
-# Update repository function: tweak if needed
-bashci_build_00_update_repo() {
-  $( "${repo_type}_update_repo_command" )
-}
-
-## Name your build functions with bashci_build_nn_name and the CI system will automatically run them in sequence
+## Name your build functions with bashci_build_NN_name and the CI system will automatically run them in sequence
 ## By default, steps will be executed inside PROJECT_WORKDIR
-bashci_build_01_start_build() {
+bashci_build_00_start_build() {
   false
 }
 
@@ -225,16 +236,16 @@ publish() {
   original_file_name="$( basename "$file" )"
   file_name="${original_file_name}${pre_suffix}${suffix}"
   file_path="$( project_basedir web)/$build_id/${file_name}"
-  archive() {
+  as_stream() {
     [[ -d "$file" ]] && tar cf - -C "$( dirname "$file" )" "$original_file_name" || cat "$file"
   }
   case "$compression" in
     none)
-      archive > "$file_path"
+      as_stream > "$file_path"
       ;;
     gzip|bzip2|xz)
       echo "Archiving $file to $file_path" >&2
-      archive | "$compression"  -9ck > "$file_path" 
+      as_stream | "$compression"  -9ck > "$file_path" 
       ;;
   esac
   sqlite3 "$( projectdb )" <<<"INSERT INTO artifacts (build_id, name, path) VALUES ($build_id, '$file_name', '$file_path');"
@@ -246,17 +257,28 @@ build_project() {
   wait_lock
   wait_for_free_builders
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
-  build_id="$( sqlite3 "$(projectdb)" <<<"INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
+  build_id="$( sql_project "INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
   mkdir -p "$(project_basedir web)/${build_id}"
   logfile="$(project_basedir web)/${build_id}/build.log"
   : > "$logfile"
   log() {
     tee -a "$logfile"
   }
-  echo "Build id: $build_id" | log
-
   build_started_time="$( date -Is )"
+  echo "Build id: $build_id, started at $build_started_time" | log
+
   update_project_json
+  set -x
+  "${REPO_TYPE}_init_repo" "$REPO_URL"
+  "${REPO_TYPE}_update_repo"
+  COMMIT_ID="$(${REPO_TYPE}_commit_id)"
+  sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
+  PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
+  echo "Current commit id: $COMMIT_ID" | log
+  echo "======================= Changes List =======================" | log
+  "${REPO_TYPE}_changes" | log
+  echo "============================================================" | log
+  set +x
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "============================================================" | log
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
@@ -271,13 +293,13 @@ build_project() {
   done
   local exit_code="$?"
   [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
-  sqlite3 "$(projectdb)" <<<"UPDATE builds SET finished=(SELECT datetime('now', 'localtime')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
+  sql_project "UPDATE builds SET finished=(SELECT datetime('now', 'localtime')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
   echo "$(date -Is) - Build finished: $build_status ($exit_code)" | log
   [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
   update_project_json
   local artifacts_file="$(project_basedir web)/${build_id}/artifacts.json"
   echo -n "[" > "$artifacts_file"
-  sqlite3 "$(projectdb)" <<<"SELECT id,name,path FROM artifacts WHERE build_id = $build_id;" | while read row; do
+  sql_project "SELECT id,name,path FROM artifacts WHERE build_id = $build_id;" | while read row; do
     split "$row"
     echo -n "${separator}{\"id\":${SPLITTED[0]},\"name\":\"${SPLITTED[1]}\",\"path\":\"${SPLITTED[2]}\"}" >> "$artifacts_file"
     local separator=","
@@ -293,7 +315,7 @@ trigger_build() {
   build_id="$( date -Is )"
   if ! [[ -d "$( project_workdir )" ]]; then
     echo "ERROR! Project $PROJECT_NAME doesn't exist" >&2
-    exit 1
+    return 1
   fi
   logfile="$( project_workdir )/bashci-build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
@@ -387,7 +409,9 @@ rewrite_index() {
         read_log(id, name);
         update_project_logs_timer = setInterval(function() {read_log(id, name); }, 1000);
       };
+      var current_project_name;
       var showProject = function(name) {
+        current_project_name = name;
         jQuery.getJSON( name + "/project.json", function(project){
           \$('#project-details-name').html(project.name);
           \$('#project-details-description').html(project.description);
@@ -424,9 +448,15 @@ rewrite_index() {
       };
       
       var showDashboard = function() {
+        current_project_name = "";
         clearInterval(update_project_history_timer);
         clearInterval(update_project_logs_timer);
         showTab('dashboard');
+      };
+      var build_project = function() {
+        jQuery.getJSON( "$TRIGGER_BUILD_URL?" + current_project_name, function(result){
+          console.log(result);
+        });
       };
       var loaded_projects = {};
       var add_project = function(project) {
@@ -498,7 +528,12 @@ rewrite_index() {
       <div class="row">
         <h3 class="col-xs-10"><span id="project-details-name"></span><small style="padding-left: 3em;" id="project-details-description"></small></h3>
         <div class="col-xs-2">
-          <button id="back-to-dashboard" class="btn btn-primary pull-right" onclick="showDashboard();">Back to dashboard</button>
+          <div class="btn-group pull-right">
+          $(
+            [[ -n "$TRIGGER_BUILD_URL" ]] && echo '<button id="build-project" class="btn btn-primary" onclick="build_project();">Build</button>'
+          )
+          <button id="back-to-dashboard" class="btn btn-info" onclick="showDashboard();">Back to dashboard</button>
+          </div>
         </div>
       </div>
       <div class="row">
@@ -532,6 +567,17 @@ rewrite_index() {
 </html>
 EOF
 }
+
+if [[ -n "$SERVER_SOFTWARE" && -z "$SERVER_BUILD_TRIGGER" ]]; then
+  # CGI Mode
+  export SERVER_BUILD_TRIGGER=true
+  trigger_build "$1" >&2
+  exit_code="$?"
+  echo "Content-type: application/json"
+  echo ""
+  echo "{\"command\":\"trigger_build\",\"project\":\"$1\",\"result\":$exit_code}"
+  exit "$exit_code"
+fi
 
 if [[ "$1" == sudo ]]; then
   shift
