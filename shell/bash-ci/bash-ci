@@ -130,11 +130,12 @@ update_projects_json() {
 
 
 update_schemas() {
-  [[ -z "$@" ]] && usage "update_schemas <sql_query>          Updates all project databases using the specified query"
+  local QUERY="$@"
+  [[ -z "$QUERY" ]] && usage "update_schemas <sql_query>          Updates all project databases using the specified query"
   find "$PROJECTS_DIR" -name "bashci-build" | sort -n | while read fname; do
     . "$fname"
     echo "Running query on $PROJECT_NAME..." >&2
-    sql_project "$@"
+    sql_project "$QUERY"
   done
 }
 
