@@ -209,6 +209,7 @@ update_project_json() {
 
 
 publish() {
+  # todo: create tar archive for directories: tar cf /tmp/foo.tar -C /tmp/bash-ci/web/
   file="$1"
   compression="${2:-none}"
   case "$compression" in
