@@ -37,7 +37,7 @@ project_workdir() {
 }
 
 project_buildfile() {
-  echo "$( project_basedir )/build.sh"
+  echo "$( project_basedir )/bashci-build"
 }
 
 project_pidfile() {
@@ -53,10 +53,6 @@ project_history() {
 
 project_repodir() {
   echo "$( project_basedir )/repo"
-}
-
-projectfile() {
-  echo "$( project_basedir)/bashci-project"
 }
 
 projectdb() {
@@ -110,7 +106,7 @@ git_update_repo_command() {
 update_projects_json() {
   sep=""
   echo -en "[" > "$PROJECTS_JSON"
-  find "$PROJECTS_DIR" -name "bashci-project" | sort -n | while read fname; do
+  find "$PROJECTS_DIR" -name "bashci-build" | sort -n | while read fname; do
     . "$fname"
     echo -en "$sep{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" >> "$PROJECTS_JSON"
     echo -en "{\"name\":\"${PROJECT_NAME}\",\"description\":\"$PROJECT_DESCRIPTION\"}" > "$(project_basedir web)/project.json"
@@ -139,18 +135,14 @@ add_project() {
   [ -z "$repo_url" ] && usage "add_project project_name repo_type repo_url (repo type currently supported: git)"
   mkdir -p "$( project_workdir )" "$( project_basedir web )"
   "${repo_type}_init_repo" "$repo_url"
-  cat >"$( projectfile )" <<EOF
-PROJECT_NAME="$PROJECT_NAME"
-PROJECT_DIR="$( project_workdir )"
-PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
-REPO_DIR="$( project_repodir )"
-EOF
   sqlite3 "$(projectdb)" <<<"CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT);"
   sqlite3 "$(projectdb)" <<<"CREATE TABLE artifacts(id integer primary key not null, build_id integer not null, name TEXT NOT NULL, path TEXT NOT NULL);"
   cat >"$( project_buildfile )" <<EOF
 #!/bin/bash
-
-. "$( projectfile )"
+PROJECT_NAME="$PROJECT_NAME"
+PROJECT_WORKDIR="$( project_workdir )"
+PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
+REPO_DIR="$( project_repodir )"
 
 ## $PROJECT_NAME build file. Tweak it and add build options to make it automatically run.
 ## Available environment variables: PROJECTS_DIR PROJECT_NAME PROJECT_DESCRIPTION REPO_DIR
@@ -163,19 +155,23 @@ bashci_build_00_update_repo() {
 }
 
 ## Name your build functions with bashci_build_nn_name and the CI system will automatically run them in sequence
+## By default, steps will be executed inside PROJECT_WORKDIR
 bashci_build_01_start_build() {
   false
 }
 
 ## You can also define hooks for build success and failure:
 
-bashci_success_trigger() {
-  true
-}
+#bashci_success_trigger() {
+#  true
+#}
 
-bashci_failure_trigger() {
-  false
-}
+#bashci_failure_trigger() {
+#  false
+#}
+
+## You can archive artifacts (files or directories) from any build step (including success and failure hooks) using the 'publish' command.
+## Publish accepts the file/directory as first parameter, and an optional compressor application (gzip, bzip2, xz). Directories are always archived as tar, compressed if requested.
 
 EOF
   $EDITOR "$( project_buildfile )"
@@ -265,6 +261,7 @@ build_project() {
     echo "============================================================" | log
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
     set -o pipefail
+    cd "$PROJECT_WORKDIR"
     "$fname" 2>&1 | log
     exit_code="$?"
     if [[ "$exit_code" != 0 ]]; then
@@ -298,7 +295,7 @@ trigger_build() {
     echo "ERROR! Project $PROJECT_NAME doesn't exist" >&2
     exit 1
   fi
-  logfile="$( project_workdir )/build.log"
+  logfile="$( project_workdir )/bashci-build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
   ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
