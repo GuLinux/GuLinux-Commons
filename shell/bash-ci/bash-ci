@@ -373,6 +373,15 @@ rewrite_index() {
         \$('#build-title').html("Build #" + id);
         \$('.build-details').show();
         tail_log(id, name);
+        \$('#build_artifacts').hide();
+        
+        jQuery.getJSON(name + "/" + id + "/artifacts.json", function(artifacts){
+          \$('#build_artifacts').toggle(artifacts.length > 0 );
+          for(var i = 0; i < artifacts.length; i++) {
+            var artifact = artifacts[i];
+            \$('#build_artifacts_list').append('<li><a href="' + name + '/' + id + '/' + artifact.name + '">' + artifact.name + '</a></li>'); 
+          }
+        });
       };
       var tail_log = function(id, name) {
         \$('.build-item').removeClass('bg-info');
@@ -509,6 +518,14 @@ rewrite_index() {
         </div>
         <div class="col-xs-10 build-details">
           <h5 id="build-status-details">Status: <span id="build-current-status"></span>, started: <span id="build-current-started"></span><span id="build-current-finished">, finished: <span id="build-current-finished-time"></span></span></h5>
+          <div class="panel panel-default" id="build_artifacts">
+            <div class="panel-heading">
+              <h3 class="panel-title">Build Artifacts</h3>
+           </div>
+           <div class="panel-body">
+             <ul id="build_artifacts_list"></ul>
+           </div>
+          </div>
           <h5>Logs</h5>
           <pre id="project-details-build-log"></pre><a name="logs-bottom" />
         </div>
