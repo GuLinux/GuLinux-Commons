@@ -146,6 +146,7 @@ PROJECT_DESCRIPTION="$(${repo_type}_fetch_description "$( project_repodir )")"
 REPO_DIR="$( project_repodir )"
 EOF
   sqlite3 "$(projectdb)" <<<"CREATE TABLE builds(id integer primary key not null, started INTEGER, finished INTEGER, exit_code INTEGER, status TEXT);"
+  sqlite3 "$(projectdb)" <<<"CREATE TABLE artifacts(id integer primary key not null, build_id integer not null, name TEXT NOT NULL, path TEXT NOT NULL);"
   cat >"$( project_buildfile )" <<EOF
 #!/bin/bash
 
@@ -203,6 +204,36 @@ update_project_json() {
   row2json
   echo -n "$row_json" > "$project_lastbuild"
   echo -n "]" >> "${project_history}"
+}
+
+
+
+publish() {
+  file="$1"
+  compression="${2:-none}"
+  case "$compression" in
+    gzip)
+      suffix=.gz
+      ;;
+    bzip2)
+      suffix=.bz2
+      ;;
+    xz)
+      suffix=.xz
+      ;;      
+  esac
+  file_name="$( basename "$file" )$suffix"
+  file_path="$( project_basedir web)/$build_id/${file_name}"
+  case "$compression" in
+    none)
+      cp -av "$file" "$file_path"
+      ;;
+    gzip|bzip2|xz)
+      echo "Archiving $file to $file_path" >&2
+      "$compression" "$file" -9ck > "$file_path" 
+      ;;
+  esac
+  sqlite3 "$( projectdb )" <<<"INSERT INTO artifacts (build_id, name, path) VALUES ($build_id, '$file_name', '$file_path');"
 }
 
 build_project() {
