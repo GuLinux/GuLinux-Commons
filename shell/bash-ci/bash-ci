@@ -209,9 +209,12 @@ update_project_json() {
 
 
 publish() {
-  # todo: create tar archive for directories: tar cf /tmp/foo.tar -C /tmp/bash-ci/web/
-  file="$1"
-  compression="${2:-none}"
+  local file="$1"
+  local compression="${2:-none}"
+  local suffix=""
+  local pre_suffix=""
+
+  [[ -d "$file" ]] && pre_suffix=".tar"
   case "$compression" in
     gzip)
       suffix=.gz
@@ -223,15 +226,19 @@ publish() {
       suffix=.xz
       ;;      
   esac
-  file_name="$( basename "$file" )$suffix"
+  original_file_name="$( basename "$file" )"
+  file_name="${original_file_name}${pre_suffix}${suffix}"
   file_path="$( project_basedir web)/$build_id/${file_name}"
+  archive() {
+    [[ -d "$file" ]] && tar cf - -C "$( dirname "$file" )" "$original_file_name" || cat "$file"
+  }
   case "$compression" in
     none)
-      cp -av "$file" "$file_path"
+      archive > "$file_path"
       ;;
     gzip|bzip2|xz)
       echo "Archiving $file to $file_path" >&2
-      "$compression" "$file" -9ck > "$file_path" 
+      archive | "$compression"  -9ck > "$file_path" 
       ;;
   esac
   sqlite3 "$( projectdb )" <<<"INSERT INTO artifacts (build_id, name, path) VALUES ($build_id, '$file_name', '$file_path');"
