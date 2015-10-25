@@ -356,6 +356,11 @@ rewrite_index() {
           padding-left: 1em;
           text-indent: -1em;
         }
+        #popup-container {
+          position: fixed;
+          right: 0px;
+          bottom: 0px;
+        }
     </style>
     <script>
       var showTab = function(name) {
@@ -453,10 +458,20 @@ rewrite_index() {
         clearInterval(update_project_logs_timer);
         showTab('dashboard');
       };
+      
+      var reset_popup_timer = function(seconds) {
+        window.setTimeout(function() { \$('#popup-container').hide().attr('class', 'alert'); }, 1000*seconds);
+      }
       var build_project = function() {
-        jQuery.getJSON( "$TRIGGER_BUILD_URL?" + current_project_name, function(result){
-          console.log(result);
-        });
+        var trigger_failed = function() { \$('#popup-container').html("Could not start build for " + current_project_name).addClass("alert-danger"); };
+        jQuery.getJSON( "$TRIGGER_BUILD_URL?" + current_project_name, function(build){
+          if(build.result == 0)
+            \$('#popup-container').html("Build for " + build.project + " correctly started").addClass("alert-success");
+          else
+            trigger_failed();
+          \$('#popup-container').show();
+          reset_popup_timer(10);
+        }).fail(trigger_failed);
       };
       var loaded_projects = {};
       var add_project = function(project) {
@@ -509,9 +524,11 @@ rewrite_index() {
         \$('#follow_logs').removeClass("active");
       }
     };    
-    
-    load_projects();
-    window.setInterval(load_projects, 1500);
+    \$(document).ready(function() {
+      \$('#popup-message').hide();
+      load_projects();
+      window.setInterval(load_projects, 1500);
+    });
     </script>
   </head>
   <body>
@@ -563,6 +580,7 @@ rewrite_index() {
         </div>
       </div>
     </div>
+    <div class="alert" id="popup-container" role="alert"><h3 id="popup-title"></h3><span id="popup-message"></div>
   </body>
 </html>
 EOF
