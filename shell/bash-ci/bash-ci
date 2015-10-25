@@ -28,9 +28,6 @@ ENABLE_TRIGGER_BUILD="${ENABLE_TRIGGER_BUILD:-true}"
 
 PROJECTS_JSON="$WEB_DIR/projects.json"
 
-mkdir -p "${PROJECTS_DIR}" "${WEB_DIR}/cgi-bin"
-ln -sf "$( readlink -f "$0" )" "${WEB_DIR}/cgi-bin"
-
 project_basedir() {
   [[ "$1" == "web" ]] && echo "${WEB_DIR}/${PROJECT_NAME}" || echo "${PROJECTS_DIR}/${PROJECT_NAME}"
 }
@@ -615,6 +612,10 @@ if [[ "$1" == sudo ]]; then
     exit $?
   fi
 fi
+
+
+mkdir -p "${PROJECTS_DIR}" "${WEB_DIR}/cgi-bin"
+ln -sf "$( readlink -f "$0" )" "${WEB_DIR}/cgi-bin"
 
 [[ -r "$INDEX_HTML" ]] || rewrite_index
 
