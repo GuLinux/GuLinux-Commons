@@ -6,7 +6,7 @@ APPNAME="$( basename "$0")"
 
 usage() {
   echo "Usage: $0 function" >&2
-  echo "Functions: add_project trigger_build rewrite_index remove_project" >&2
+  echo "Functions: add_project trigger_build rewrite_index remove_project update_schemas" >&2
   echo "$@" >&2
   echo
   exit 1
@@ -129,6 +129,16 @@ update_projects_json() {
     sep=","
   done
   echo -en "]" >> "$PROJECTS_JSON"
+}
+
+
+update_schemas() {
+  [[ -z "$@" ]] && usage "update_schemas <sql_query>          Updates all project databases using the specified query"
+  find "$PROJECTS_DIR" -name "bashci-build" | sort -n | while read fname; do
+    . "$fname"
+    echo "Running query on $PROJECT_NAME..." >&2
+    sql_project "$@"
+  done
 }
 
 remove_project() {
@@ -585,6 +595,7 @@ rewrite_index() {
 </html>
 EOF
 }
+
 
 if [[ -n "$SERVER_SOFTWARE" && -z "$SERVER_BUILD_TRIGGER" ]]; then
   # CGI Mode
