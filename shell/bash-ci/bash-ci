@@ -597,7 +597,7 @@ EOF
 if [[ -n "$SERVER_SOFTWARE" && -z "$SERVER_BUILD_TRIGGER" ]]; then
   # CGI Mode
   export SERVER_BUILD_TRIGGER=true
-  trigger_build "$1" >&2
+  $0 sudo trigger_build "$1" >&2
   exit_code="$?"
   echo "Content-type: application/json"
   echo ""
