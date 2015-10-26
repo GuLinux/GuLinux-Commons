@@ -287,6 +287,13 @@ build_project() {
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
   wait_lock
   wait_for_free_builders
+  finish_build() {
+    local status="$1"; shift
+    local message="$@"
+    [[ -n "$message" ]] && echo -e "$message"
+    unlock_build
+    exit "$status"
+  }
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sql_project "INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
   PREVIOUS_BUILD_RESULT="$( sql_project "SELECT status FROM builds WHERE id < $build_id ORDER BY id DESC LIMIT 1;" )"
@@ -300,8 +307,8 @@ build_project() {
   echo "Build id: $build_id, started at $build_started_time, previous build: $PREVIOUS_BUILD_RESULT" | log
 
   update_project_json
-  "${REPO_TYPE}_init_repo" "$REPO_URL"
-  "${REPO_TYPE}_update_repo"
+  "${REPO_TYPE}_init_repo" "$REPO_URL" || finish_build 1 "Unable to checkout $REPO_TYPE repository from $REPO_URL"
+  "${REPO_TYPE}_update_repo" || finish_build 2 "Unable to update source code from $REPO_RYPE remote repository $REPO_URL"
   COMMIT_ID="$(${REPO_TYPE}_commit_id)"
   sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
   PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
@@ -315,11 +322,7 @@ build_project() {
     set -o pipefail
     cd "$PROJECT_WORKDIR"
     "$fname" 2>&1 | log
-    exit_code="$?"
-    if [[ "$exit_code" != 0 ]]; then
-      unlock_build
-      exit $exit_code
-    fi
+    [[ "$?" != 0 ]] && exit $exit_code
   done
   local exit_code="$?"
   [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
@@ -335,8 +338,7 @@ build_project() {
     local separator=","
   done
   echo -n "]" >> "$artifacts_file"
-  unlock_build
-  exit "${exit_code}"
+  finish_build "${exit_code}"
 }
 
 trigger_build() {
