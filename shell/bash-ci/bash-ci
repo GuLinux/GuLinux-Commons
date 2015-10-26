@@ -338,7 +338,8 @@ build_project() {
     set -o pipefail
     cd "$PROJECT_WORKDIR"
     "$fname" 2>&1 | log
-    [[ "$?" != 0 ]] && exit $exit_code
+    local exit_code="$?"
+    [[ "$exit_code" != 0 ]] && exit $exit_code
   done
   
   finish_build "$?"
