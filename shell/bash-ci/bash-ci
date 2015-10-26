@@ -348,7 +348,7 @@ trigger_build() {
   fi
   logfile="$( project_workdir )/bashci-build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
-  ( nohup bash -x "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
+  ( nohup bash "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
 
 rewrite_index() {
