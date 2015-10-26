@@ -97,8 +97,7 @@ wait_for_finished() {
 
 git_init_repo() {
   [[ -d "$( project_repodir )/.git" ]] && return 0
-  git clone "$1" "$(project_repodir)"
-  ( cd "$(project_repodir)" && git submodule init )
+  git clone "$1" "$(project_repodir)" && ( cd "$(project_repodir)" && git submodule init )
 }
 
 git_update_repo() {
@@ -287,13 +286,7 @@ build_project() {
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
   wait_lock
   wait_for_free_builders
-  finish_build() {
-    local status="$1"; shift
-    local message="$@"
-    [[ -n "$message" ]] && echo -e "$message"
-    unlock_build
-    exit "$status"
-  }
+
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sql_project "INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
   PREVIOUS_BUILD_RESULT="$( sql_project "SELECT status FROM builds WHERE id < $build_id ORDER BY id DESC LIMIT 1;" )"
@@ -301,14 +294,39 @@ build_project() {
   logfile="$(project_basedir web)/${build_id}/build.log"
   : > "$logfile"
   log() {
+#     previous_exit_code="$?"
     tee -a "$logfile"
+#     return "$previous_exit_code"
   }
+  
+  finish_build() {
+    local exit_code="$1"; shift
+    local message="$@"
+    [[ -n "$message" ]] && echo -e "$message" | log
+    [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
+    sql_project "UPDATE builds SET finished=(SELECT datetime('now', 'localtime')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
+    echo "$(date -Is) - Build finished: $build_status ($exit_code)" | log
+    [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
+    update_project_json
+    local artifacts_file="$(project_basedir web)/${build_id}/artifacts.json"
+    echo -n "[" > "$artifacts_file"
+    sql_project "SELECT id,name,path FROM artifacts WHERE build_id = $build_id;" | while read row; do
+      split "$row"
+      echo -n "${separator}{\"id\":${SPLITTED[0]},\"name\":\"${SPLITTED[1]}\",\"path\":\"${SPLITTED[2]}\"}" >> "$artifacts_file"
+      local separator=","
+    done
+    echo -n "]" >> "$artifacts_file"
+    unlock_build
+    exit "$exit_code"
+  }
+  
   build_started_time="$( date -Is )"
   echo "Build id: $build_id, started at $build_started_time, previous build: $PREVIOUS_BUILD_RESULT" | log
 
   update_project_json
-  "${REPO_TYPE}_init_repo" "$REPO_URL" || finish_build 1 "Unable to checkout $REPO_TYPE repository from $REPO_URL"
-  "${REPO_TYPE}_update_repo" || finish_build 2 "Unable to update source code from $REPO_RYPE remote repository $REPO_URL"
+  set -o pipefail
+  "${REPO_TYPE}_init_repo" "$REPO_URL" 2>&1| log || finish_build $? "Unable to checkout $REPO_TYPE repository from $REPO_URL"
+  "${REPO_TYPE}_update_repo" | log 2>&1 || finish_build $? "Unable to update source code from $REPO_RYPE remote repository $REPO_URL"
   COMMIT_ID="$(${REPO_TYPE}_commit_id)"
   sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
   PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
@@ -324,21 +342,8 @@ build_project() {
     "$fname" 2>&1 | log
     [[ "$?" != 0 ]] && exit $exit_code
   done
-  local exit_code="$?"
-  [[ "${exit_code}" == 0 ]] && build_status="success" || build_status="failure"
-  sql_project "UPDATE builds SET finished=(SELECT datetime('now', 'localtime')), exit_code=$exit_code, status='$build_status' WHERE id = $build_id;"
-  echo "$(date -Is) - Build finished: $build_status ($exit_code)" | log
-  [[ "$( type -t "bashci_${build_status}_trigger" )" == "function" ]] && bashci_${build_status}_trigger
-  update_project_json
-  local artifacts_file="$(project_basedir web)/${build_id}/artifacts.json"
-  echo -n "[" > "$artifacts_file"
-  sql_project "SELECT id,name,path FROM artifacts WHERE build_id = $build_id;" | while read row; do
-    split "$row"
-    echo -n "${separator}{\"id\":${SPLITTED[0]},\"name\":\"${SPLITTED[1]}\",\"path\":\"${SPLITTED[2]}\"}" >> "$artifacts_file"
-    local separator=","
-  done
-  echo -n "]" >> "$artifacts_file"
-  finish_build "${exit_code}"
+  
+  finish_build "$?"
 }
 
 trigger_build() {
