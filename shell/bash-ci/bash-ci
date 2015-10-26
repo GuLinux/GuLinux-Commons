@@ -14,6 +14,7 @@ usage() {
 
 PROJECTS_DIR="${PROJECTS_DIR:-/var/lib/${APPNAME}}"
 WEB_DIR="${WEB_DIR:-$PROJECTS_DIR/web}"
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-set your bash-ci address here}"
 EDITOR="${EDITOR:-vim}"
 MAX_JOBS="${MAX_JOBS:-2}"
 PROJECTS_HISTORY_LIMIT="${PROJECTS_HISTORY_LIMIT:-20}"
@@ -188,7 +189,7 @@ bashci_success_trigger() {
   if [[ "\$PREVIOUS_BUILD_RESULT" == "failure" ]]; then
     mail  -s "Bash-CI \$PROJECT_NAME Build \$build_id: success" "\$MAIL_RECIPIENT" <<EOM
 Build #\$build_id successful for project \${PROJECT_NAME}.
-You can see the full log at http://bash-ci-web-address # REPLACE THIS with your real address
+You can see the full log at \${PUBLIC_BASE_URL}
 Regards,
 Bash-CI
 
@@ -202,7 +203,7 @@ bashci_failure_trigger() {
 Build #\$build_id failed for project \${PROJECT_NAME}.
 Summary (last 50 log lines):
 \$( tail -n 50 \$(project_basedir web)/\${build_id}/build.log )
-You can see the full log at http://bash-ci-web-address # REPLACE THIS with your real address
+You can see the full log at \${PUBLIC_BASE_URL}
 Regards,
 Bash-CI
 
