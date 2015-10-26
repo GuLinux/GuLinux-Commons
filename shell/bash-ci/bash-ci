@@ -287,6 +287,8 @@ build_project() {
   wait_lock
   wait_for_free_builders
 
+  while [[ -n "$1" ]]; do eval "export ${1/=/=\"}\""; shift; done
+  
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sql_project "INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
   PREVIOUS_BUILD_RESULT="$( sql_project "SELECT status FROM builds WHERE id < $build_id ORDER BY id DESC LIMIT 1;" )"
@@ -621,7 +623,7 @@ EOF
 
 
 if [[ -n "$SERVER_SOFTWARE" && -z "$SERVER_BUILD_TRIGGER" ]]; then
-  # CGI Mode
+#   CGI Mode
   export SERVER_BUILD_TRIGGER=true
   $0 sudo trigger_build "$1" >&2
   exit_code="$?"
