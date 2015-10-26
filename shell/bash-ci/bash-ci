@@ -332,17 +332,16 @@ build_project() {
   echo "======================= Changes List =======================" | log
   "${REPO_TYPE}_changes" | log
   echo "============================================================" | log
-  declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
+  for fname in $( declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n ); do
     echo "============================================================" | log
-    echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
+    step_name="${fname#bashci_build_??_}"
+    echo "$( date -Is ) - Running '$step_name'" | log
     set -o pipefail
     cd "$PROJECT_WORKDIR"
-    "$fname" 2>&1 | log
-    local exit_code="$?"
-    [[ "$exit_code" != 0 ]] && exit $exit_code
+    "$fname" 2>&1 | log || finish_build "$?" "------------------------------- Step $step_name failed"
   done
   
-  finish_build "$?"
+  finish_build 0
 }
 
 trigger_build() {
