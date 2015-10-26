@@ -181,13 +181,35 @@ bashci_build_00_start_build() {
 
 ## You can also define hooks for build success and failure:
 
-#bashci_success_trigger() {
-#  true
-#}
+MAIL_RECIPIENT="Your Name <your-address@mail.com>"
 
-#bashci_failure_trigger() {
-#  false
-#}
+bashci_success_trigger() {
+  return # Remove this line to enable the trigger
+  if [[ "\$PREVIOUS_BUILD_RESULT" == "failure" ]]; then
+    mail  -s "Bash-CI \$PROJECT_NAME Build \$build_id: success" "\$MAIL_RECIPIENT" <<EOM
+Build #\$build_id successful for project \${PROJECT_NAME}.
+You can see the full log at http://bash-ci-web-address # REPLACE THIS with your real address
+Regards,
+Bash-CI
+
+EOM
+ fi
+}
+
+bashci_failure_trigger() {
+  return # Remove this line to enable the trigger
+  mail  -s "Bash-CI \$PROJECT_NAME Build \$build_id: failure" "\$MAIL_RECIPIENT" <<EOM
+Build #\$build_id failed for project \${PROJECT_NAME}.
+Summary (last 50 log lines):
+\$( tail -n 50 \$(project_basedir web)/\${build_id}/build.log )
+You can see the full log at http://bash-ci-web-address # REPLACE THIS with your real address
+Regards,
+Bash-CI
+
+EOM
+}
+
+## In these triggers you can use the PREVIOUS_BUILD_RESULT environment variable (success/failure). For instance, this way you can send a success notification email only if the previous build was failed. 
 
 ## You can archive artifacts (files or directories) from any build step (including success and failure hooks) using the 'publish' command.
 ## Publish accepts the file/directory as first parameter, and an optional compressor application (gzip, bzip2, xz). Directories are always archived as tar, compressed if requested.
@@ -266,6 +288,7 @@ build_project() {
   wait_for_free_builders
   echo "$BASHPID" > "$(project_pidfile)/${PID_FILE_NAME}"
   build_id="$( sql_project "INSERT INTO builds(started, status) VALUES((SELECT datetime('now', 'localtime')), 'building'); select last_insert_rowid();")"
+  PREVIOUS_BUILD_RESULT="$( sql_project "SELECT status FROM builds WHERE id < $build_id ORDER BY id DESC LIMIT 1;" )"
   mkdir -p "$(project_basedir web)/${build_id}"
   logfile="$(project_basedir web)/${build_id}/build.log"
   : > "$logfile"
@@ -273,10 +296,9 @@ build_project() {
     tee -a "$logfile"
   }
   build_started_time="$( date -Is )"
-  echo "Build id: $build_id, started at $build_started_time" | log
+  echo "Build id: $build_id, started at $build_started_time, previous build: $PREVIOUS_BUILD_RESULT" | log
 
   update_project_json
-  set -x
   "${REPO_TYPE}_init_repo" "$REPO_URL"
   "${REPO_TYPE}_update_repo"
   COMMIT_ID="$(${REPO_TYPE}_commit_id)"
@@ -286,7 +308,6 @@ build_project() {
   echo "======================= Changes List =======================" | log
   "${REPO_TYPE}_changes" | log
   echo "============================================================" | log
-  set +x
   declare -F| grep bashci_build_ | awk '{ print $3 }' | sort -n | while read fname; do
     echo "============================================================" | log
     echo "$( date -Is ) - Running '${fname#bashci_build_??_}'" | log
@@ -327,7 +348,7 @@ trigger_build() {
   fi
   logfile="$( project_workdir )/bashci-build.log"
   echo "Launched build with id $build_id, logfile: $logfile"
-  ( nohup "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
+  ( nohup bash -x "$0" build_project "$@" > "$logfile" 2>&1 & )2>/dev/null
 }
 
 rewrite_index() {
