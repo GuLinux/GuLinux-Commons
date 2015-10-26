@@ -294,9 +294,7 @@ build_project() {
   logfile="$(project_basedir web)/${build_id}/build.log"
   : > "$logfile"
   log() {
-#     previous_exit_code="$?"
     tee -a "$logfile"
-#     return "$previous_exit_code"
   }
   
   finish_build() {
@@ -326,7 +324,7 @@ build_project() {
   update_project_json
   set -o pipefail
   "${REPO_TYPE}_init_repo" "$REPO_URL" 2>&1| log || finish_build $? "Unable to checkout $REPO_TYPE repository from $REPO_URL"
-  "${REPO_TYPE}_update_repo" | log 2>&1 || finish_build $? "Unable to update source code from $REPO_RYPE remote repository $REPO_URL"
+  "${REPO_TYPE}_update_repo" 2>&1 | log || finish_build $? "Unable to update source code from $REPO_RYPE remote repository $REPO_URL"
   COMMIT_ID="$(${REPO_TYPE}_commit_id)"
   sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
   PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
