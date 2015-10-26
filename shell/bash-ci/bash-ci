@@ -335,10 +335,9 @@ build_project() {
   sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
   PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
   echo "Current commit id: $COMMIT_ID" | log
-  build_skipped=false
   if [[ "$build_on_no_changes" != "true" && "$COMMIT_ID" == "$PREVIOUS_COMMIT_ID" && "$PREVIOUS_BUILD_RESULT" == "success" ]]; then
     echo "*** Skipping build since there were no changes, to disable this behaviour launch trigger_build with build_on_no_changes=true parameter" | log
-    build_skipped=true
+    local build_skipped=true
     finish_build 0
   fi
   echo "======================= Changes List =======================" | log
