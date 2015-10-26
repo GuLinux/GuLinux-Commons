@@ -286,6 +286,8 @@ build_project() {
   [ -r "$( project_buildfile )" ] && . "$( project_buildfile )" # TODO: handle errors
   wait_lock
   wait_for_free_builders
+  
+  build_on_no_changes=false
 
   while [[ -n "$1" ]]; do eval "export ${1/=/=\"}\""; shift; done
   
@@ -298,6 +300,8 @@ build_project() {
   log() {
     tee -a "$logfile"
   }
+  
+  echo "Global build options: build_on_no_changes=true|false      builds even if there were no commits and previous build was successful, defaults to false)" | log
   
   finish_build() {
     local exit_code="$1"; shift
@@ -331,6 +335,10 @@ build_project() {
   sql_project "UPDATE builds SET commit_id = '$COMMIT_ID' WHERE id = $build_id;"
   PREVIOUS_COMMIT_ID="$( sql_project "select commit_id from builds WHERE status <> 'building' ORDER BY finished desc LIMIT 1;" )"
   echo "Current commit id: $COMMIT_ID" | log
+  if [[ "$build_on_no_changes" != "true" && "$COMMIT_ID" == "$PREVIOUS_COMMIT_ID" && "$PREVIOUS_BUILD_RESULT" == "success" ]]; then
+    echo "Skipping build since there were no changes, to disable this behaviour launch trigger_build with build_on_no_changes=true parameter" | log
+    finish_build 0
+  fi
   echo "======================= Changes List =======================" | log
   "${REPO_TYPE}_changes" | log
   echo "============================================================" | log
