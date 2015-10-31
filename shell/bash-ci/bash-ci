@@ -188,7 +188,7 @@ bashci_success_trigger() {
   if [[ "\$PREVIOUS_BUILD_RESULT" == "failure" ]]; then
     mail  -s "Bash-CI \$PROJECT_NAME Build \$build_id: success" "\$MAIL_RECIPIENT" <<EOM
 Build #\$build_id successful for project \${PROJECT_NAME}.
-You can see the full log at \${PUBLIC_BASE_URL}
+You can see the full log at \${PUBLIC_BASE_URL}#${PROJECT_NAME}/$build_id
 Regards,
 Bash-CI
 
@@ -202,7 +202,7 @@ bashci_failure_trigger() {
 Build #\$build_id failed for project \${PROJECT_NAME}.
 Summary (last 50 log lines):
 \$( tail -n 50 \$(project_basedir web)/\${build_id}/build.log )
-You can see the full log at \${PUBLIC_BASE_URL}
+You can see the full log at \${PUBLIC_BASE_URL}#${PROJECT_NAME}/$build_id
 Regards,
 Bash-CI
 
