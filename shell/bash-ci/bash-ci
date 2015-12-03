@@ -188,7 +188,7 @@ bashci_success_trigger() {
   if [[ "\$PREVIOUS_BUILD_RESULT" == "failure" ]]; then
     mail  -s "Bash-CI \$PROJECT_NAME Build \$build_id: success" "\$MAIL_RECIPIENT" <<EOM
 Build #\$build_id successful for project \${PROJECT_NAME}.
-You can see the full log at \${PUBLIC_BASE_URL}
+You can see the full log at \${PUBLIC_BASE_URL}#${PROJECT_NAME}/$build_id
 Regards,
 Bash-CI
 
@@ -202,7 +202,7 @@ bashci_failure_trigger() {
 Build #\$build_id failed for project \${PROJECT_NAME}.
 Summary (last 50 log lines):
 \$( tail -n 50 \$(project_basedir web)/\${build_id}/build.log )
-You can see the full log at \${PUBLIC_BASE_URL}
+You can see the full log at \${PUBLIC_BASE_URL}#${PROJECT_NAME}/$build_id
 Regards,
 Bash-CI
 
@@ -422,6 +422,8 @@ rewrite_index() {
       }
       
       var read_log = function(id, name) {
+          if(project_history == undefined)
+            return;
           var build_status = project_history.find(function(e) { return e.id == id; });
           if(build_status != undefined) {
             \$('#build-current-status').html(build_status.status);
@@ -437,22 +439,21 @@ rewrite_index() {
             scrollTo( \$(document).height());
           }
       };
-      var display_build = function(event) {
-        var id = event.data.id;
-        var name = event.data.name;
+
+      var showBuild = function(id) {
         \$('#build-title').html("Build #" + id);
         \$('.build-details').show();
-        tail_log(id, name);
+        tail_log(id, current_project_name);
         \$('#build_artifacts').hide();
         
-        jQuery.getJSON(name + "/" + id + "/artifacts.json", function(artifacts){
+        jQuery.getJSON(current_project_name + "/" + id + "/artifacts.json", function(artifacts){
           \$('#build_artifacts').toggle(artifacts.length > 0 );
           for(var i = 0; i < artifacts.length; i++) {
             var artifact = artifacts[i];
-            \$('#build_artifacts_list').append('<li><a href="' + name + '/' + id + '/' + artifact.name + '">' + artifact.name + '</a></li>'); 
+            \$('#build_artifacts_list').append('<li><a href="' + current_project_name + '/' + id + '/' + artifact.name + '">' + artifact.name + '</a></li>'); 
           }
         });
-      };
+      }
       var tail_log = function(id, name) {
         \$('.build-item').removeClass('bg-info');
         \$(".build-item[data-build-id='" + id + "']").addClass('bg-info');
@@ -460,8 +461,11 @@ rewrite_index() {
         read_log(id, name);
         update_project_logs_timer = setInterval(function() {read_log(id, name); }, 1000);
       };
+      
       var current_project_name;
-      var showProject = function(name) {
+      
+      var showProject = function(name, onShow) {
+        onShow = onShow || 0;
         current_project_name = name;
         jQuery.getJSON( name + "/project.json", function(project){
           \$('#project-details-name').html(project.name);
@@ -474,9 +478,8 @@ rewrite_index() {
             for(var i = history.length-1; i>=0; i--) {
               var item_status_id = 'build_' + history[i].id + '_status';
               if(\$('#' + item_status_id).length == 0) {
-                \$('<li data-build-id="' + history[i].id + '" class="build-item"><a href="#"><span id="' + item_status_id + '"><small>#' + history[i].id + ' ' + history[i].started + '</small></span></a></li>')
-                  .prependTo('#project-details-history')
-                  .click( {"id": history[i].id, "name": name}, display_build);
+                \$('<li data-build-id="' + history[i].id + '" class="build-item"><a href="#' + name + '/' + history[i].id + '"><span id="' + item_status_id + '"><small>#' + history[i].id + ' ' + history[i].started + '</small></span></a></li>')
+                  .prependTo('#project-details-history');
               }
               \$('#' + item_status_id).attr("class", 'build-' + history[i].status);
             }
@@ -489,6 +492,8 @@ rewrite_index() {
               if(to_delete)
                 \$(element).remove();
             });
+            if(onShow)
+              onShow();
           });
         };
         \$('#project-details-history').empty();
@@ -526,7 +531,7 @@ rewrite_index() {
       \$(".projects").append("<tr id='" + rowname + "'></tr>");
       \$("#" + rowname).html("\
         <td>\
-          <a href='#' onclick='showProject(\"" + project.name + "\");'>" + project.name + "</a>\
+          <a href='#" + project.name + "'>" + project.name + "</a>\
         </td>\
         <td>" + project.description + "</td>\
         <td id='" + project.name + "_build_started'/>\
@@ -542,7 +547,8 @@ rewrite_index() {
       project['timer'] = window.setInterval(show_status, 1000);
       loaded_projects[project.name] = project;
     }
-    var load_projects = function() {
+    var load_projects = function(onLoad) {
+      onLoad = onLoad || 0;
       jQuery.getJSON("projects.json", function(projects){
         for(var i=0; i<projects.length; i++){
           if(loaded_projects[projects[i].name] == undefined)
@@ -558,6 +564,8 @@ rewrite_index() {
             delete loaded_projects[project];
           }
         }
+        if(onLoad)
+          onLoad();
       });
     };
     
@@ -570,9 +578,22 @@ rewrite_index() {
         \$('#follow_logs').removeClass("active");
       }
     };    
+    window.onhashchange = function() {
+      var page = location.hash.split('/');
+      for(var project in loaded_projects) {
+        if(page[0] == '#' + project) {
+          if(current_project_name != project)
+            showProject(project, window.onhashchange);
+          if(page[1] > 0)
+            showBuild(page[1]);
+          return;
+        }
+      }
+      showDashboard();
+    };
     \$(document).ready(function() {
       \$('#popup-message').hide();
-      load_projects();
+      load_projects(window.onhashchange);
       window.setInterval(load_projects, 1500);
     });
     </script>
@@ -595,7 +616,7 @@ rewrite_index() {
           $(
             [[ -n "$TRIGGER_BUILD_URL" ]] && echo '<button id="build-project" class="btn btn-primary" onclick="build_project();">Build</button>'
           )
-          <button id="back-to-dashboard" class="btn btn-info" onclick="showDashboard();">Back to dashboard</button>
+          <a href="#dashboard" class="btn btn-info">Back to dashboard</a>
           </div>
         </div>
       </div>
