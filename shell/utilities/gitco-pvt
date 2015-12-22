@@ -11,12 +11,19 @@ randMax() {
 help() {
   echo "Usage: $0 [--reset-ts] commit message"
   echo "       $0 --set-ts start-date"
+  echo "       $0 --ts-from-log (sets timestamp from log message"
 }
 
 
 LAST_COMMIT_TS_FILE="/tmp/$( basename $0).ts"
 if test "$1" == "" || test "$1" == "--help"; then
   help
+  exit 0
+fi
+
+
+if [ "$1" == "--ts-from-log" ]; then
+  date --date "$( git log --pretty='%cd' -1 --date=iso)" "+%s" > "$LAST_COMMIT_TS_FILE"
   exit 0
 fi
 
