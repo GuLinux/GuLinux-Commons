@@ -2,7 +2,7 @@
 
 
 doHelp() {
-  echo "Usage: $( basename $0) url [flags]"
+  echo "Usage: $( basename $0) url [flags] -- <curl-options>"
   echo "Flags:"
   echo "  -t timeout   : checks every <timeout> seconds (default: 5)"
   echo "  -n           : use system GUI notifications (default: off)"
@@ -21,8 +21,9 @@ page="$1"; shift
 
 timeout=5
 
-while test "x$1" != "x"; do
+while [[ -n "$1" && "$1" != "--" ]] ; do
   flag="$1"; shift
+  echo "flag: '$flag'"
   case "$flag" in
     "-t")
       timeout="$1"; shift
@@ -33,21 +34,27 @@ while test "x$1" != "x"; do
     "-m")
       SEND_MAIL_TO="$1"; shift
       ;;
+    "--")
+      echo "Got curl options: $@"
+      break
+      ;;
     *)
       doHelp
     exit 1
   esac
 done
+shift
+export CURL_OPTS="$@"
 
 
 page_status="/tmp/$( basename $0)-$( echo "$page" | md5sum | awk '{ print $1 }' ).status"
 page_out="/tmp/$( basename "$0")-$$.html"
-curl "$page" 2>/dev/null > "$page_out"
+curl "$page" $CURL_OPTS 2>/dev/null > "$page_out"
 cat "$page_out" | md5sum | awk '{ print $1 }' > "$page_status"
 echo "Wrote first status checksum; watching page for modifications."
 echo "CTRL-C to quit, CTRL-Z followed by \"bg\" command to put in background."
 while sleep "$timeout" ; do
-  curl "$page" 2>/dev/null > "${page_out}.tmp"
+  curl "$page" $CURL_OPTS 2>/dev/null > "${page_out}.tmp"
   new_md5="$( cat "${page_out}.tmp" | md5sum | awk '{ print $1 }' )"
   if [ "$new_md5" != "$( cat $page_status )" ]; then
     message="$( date ): Web Page $page just changed: \n $( diff -ru "${page_out}" "${page_out}.tmp" )"
