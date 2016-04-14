@@ -19,11 +19,12 @@
 #ifndef GULINUX_COMMONS_CIMG_HISTOGRAM
 #define GULINUX_COMMONS_CIMG_HISTOGRAM
 #include <CImg.h>
+#include <memory>
 namespace GuLinux {
   template<typename T>
   class Histogram {
   public:
-    
+    typedef std::shared_ptr<Histogram<T>> ptr;
     struct Bin {
       double start, middle, end;
       uint32_t count, index;
