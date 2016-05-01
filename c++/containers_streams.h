@@ -32,8 +32,9 @@ public:
   operator C&&() { return std::move(_container_ref); }
   
   // Operations
-  cstream<C> &sorted(const std::function<bool(const value_type &, const value_type &)> &comp = [](const value_type &a, const value_type &b){ return a < b; } ) {
-    std::sort(std::begin(_container_ref), std::end(_container_ref), comp);
+  template<typename Op = std::less<value_type>>
+  cstream<C> &sorted(const Op &op = {}) {
+    std::sort(std::begin(_container_ref), std::end(_container_ref), op);
     return *this;
   }
   template<typename T, typename Op>
