@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <set>
+#include <map>
 #include "containers_streams.h"
 using namespace GuLinux;
 using namespace std;
@@ -37,3 +39,11 @@ TEST(ContainersStream, transform) {
   vector<string> expected{"1", "3", "5", "6", "34"};
   ASSERT_EQ(expected, actual);
 }
+
+TEST(ContainersStream, transform_to_set) {
+  cstream<vector<int>> c{{1, 3, 34, 6, 3}};
+  set<int> actual = c.sorted().transform<set<int>>([](int a){ return a; });
+  set<int> expected{1, 3, 34, 6};
+  ASSERT_EQ(expected, actual);
+}
+

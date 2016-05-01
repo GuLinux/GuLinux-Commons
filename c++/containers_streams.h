@@ -40,12 +40,21 @@ public:
   template<typename T, typename Op>
   cstream<T> transform(Op transform_f) {
     T dest;
-    std::transform(std::begin(_container_ref), std::end(_container_ref), std::back_inserter(dest), transform_f);
+    std::transform(std::begin(_container_ref), std::end(_container_ref), get_inserter(dest), transform_f);
     return {std::move(dest)};
   }
+  
 private:
   C __moved;
   C &_container_ref;
+  
+  template<typename T> auto get_inserter(T &t) -> decltype(t.push_back({}), std::back_inserter<T>(t)) {
+    return std::back_inserter(t);
+  }
+  template<typename T> auto get_inserter(T &t) -> decltype(t.insert({}), std::inserter<T>(t, t.end())) {
+    return std::inserter(t, t.end());
+  }
+  
 };
 }
 
