@@ -22,8 +22,13 @@ namespace GuLinux {
 template<typename C>
 class cstream {
 public:
+  cstream(C &c) : _container_ref{c} {}
+  cstream(C &&c) : __moved{c}, _container_ref{__moved} {}
+  operator C&() { return _container_ref; }
+  C &ref() { return *this; }
 private:
-  
+  C __moved;
+  C &_container_ref;
 };
 }
 
