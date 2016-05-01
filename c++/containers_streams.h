@@ -18,14 +18,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#include <utility>
+#include <algorithm>
+#include <functional>
 namespace GuLinux {
 template<typename C>
 class cstream {
 public:
+  typedef typename C::value_type value_type;
   cstream(C &c) : _container_ref{c} {}
   cstream(C &&c) : __moved{c}, _container_ref{__moved} {}
-  operator C&() { return _container_ref; }
-  C &ref() { return *this; }
+  C &ref() { return _container_ref; }
+  operator C&&() { return std::move(_container_ref); }
+  
+  // Operations
+  cstream<C> &sorted(const std::function<bool(const value_type &, const value_type &)> &comp = [](const value_type &a, const value_type &b){ return a < b; } ) {
+    std::sort(std::begin(_container_ref), std::end(_container_ref), comp);
+    return *this;
+  }
+  template<typename T, typename Op>
+  cstream<T> transform(Op transform_f) {
+    T dest;
+    std::transform(std::begin(_container_ref), std::end(_container_ref), std::back_inserter(dest), transform_f);
+    return {std::move(dest)};
+  }
 private:
   C __moved;
   C &_container_ref;
