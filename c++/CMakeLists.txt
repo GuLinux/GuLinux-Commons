@@ -1,2 +1,7 @@
+enable_testing()
 find_package(Boost REQUIRED)
+find_package(GTest)
 add_library(GuLinux_c++_Commons STATIC settings.cpp)
+if(GTEST_FOUND)
+  add_subdirectory(tests)
+endif(GTEST_FOUND)

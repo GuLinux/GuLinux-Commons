@@ -1,0 +1,3 @@
+add_executable(test_containers_streams test_containers_streams.cpp)
+target_link_libraries(test_containers_streams ${GTEST_BOTH_LIBRARIES})
+GTEST_ADD_TESTS(test_containers_streams test_containers_streams.cpp)
