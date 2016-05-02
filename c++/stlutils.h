@@ -52,7 +52,7 @@ private:
 };
 #define CUR_POS std::string{__FUNCTION__} + " " + std::string{__FILE__} + " "
 #define benchmark_scope(name, ...) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr ), __VA_ARGS__};
-#define benchmark_start(name) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr )};
+#define benchmark_start(name, ...) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr ), __VA_ARGS__};
 #define benchmark_end(name) delete name;
 
 }
