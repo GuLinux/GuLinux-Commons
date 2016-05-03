@@ -24,8 +24,7 @@
 
 #include <iostream>
 namespace GuLinux {
-template<typename C>
-class cstream {
+template<typename C> class cstream {
 public:
   typedef typename C::value_type value_type;
   cstream(C &c) : _container_ref{c} {}
@@ -34,55 +33,51 @@ public:
   operator C&&() { return std::move(_container_ref); }
   
   // Operations
-  template<typename BinaryFunction = std::less<value_type>>
-  cstream<C> &sorted(const BinaryFunction &op = {}) {
+  template<typename BinaryFunction = std::less<value_type>> cstream<C> &sorted(const BinaryFunction &op = {}) {
     std::sort(std::begin(_container_ref), std::end(_container_ref), op);
     return *this;
   }
   
-  template<typename T, typename UnaryFunction>
-  cstream<T> transform(UnaryFunction transform_f) const {
+  template<typename T, typename UnaryFunction> cstream<T> transform(UnaryFunction transform_f) const {
     T dest;
     std::transform(std::begin(_container_ref), std::end(_container_ref), std::inserter(dest, std::end(dest)), transform_f);
     return {std::move(dest)};
   }
   
-  template<typename UnaryFunction>
-  cstream<C> &remove(UnaryFunction remove_f) {
+  template<typename UnaryFunction> cstream<C> &remove(UnaryFunction remove_f) {
     _container_ref.erase(std::remove_if(std::begin(_container_ref), std::end(_container_ref), remove_f), std::end(_container_ref));
     return *this;
   }
   
     
-  template<typename UnaryFunction>
-  cstream<C> &filter(UnaryFunction filter) {
+  template<typename UnaryFunction> cstream<C> &filter(UnaryFunction filter) {
     return remove([&](const value_type &v) { return ! filter(v); });
   }
   
   
-  template<typename UnaryFunction = std::plus<value_type>>
-  value_type accumulate(value_type initial = {}, UnaryFunction op = {}) const {
+  template<typename UnaryFunction = std::plus<value_type>> value_type accumulate(value_type initial = {}, UnaryFunction op = {}) const {
     return std::accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
   }
   
-  template<typename UnaryFunction>
-  cstream<C> &for_each(UnaryFunction f) {
+  template<typename UnaryFunction> cstream<C> &for_each(UnaryFunction f) {
     std::for_each(std::begin(_container_ref), std::end(_container_ref), f);
     return *this;
   }
   
-  template<typename UnaryFunction>
-  bool all(UnaryFunction f) const {
+  template<typename UnaryFunction> bool all(UnaryFunction f) const {
     return std::all_of(std::begin(_container_ref), std::end(_container_ref), f);
   }
-  template<typename UnaryFunction>
-  bool any(UnaryFunction f) const {
+  template<typename UnaryFunction> bool any(UnaryFunction f) const {
     return std::any_of(std::begin(_container_ref), std::end(_container_ref), f);
   }
-  template<typename UnaryFunction>
-  bool none(UnaryFunction f) const {
+  template<typename UnaryFunction> bool none(UnaryFunction f) const {
     return std::none_of(std::begin(_container_ref), std::end(_container_ref), f);
   }
+  
+  cstream<C> copy() const {
+    C c(_container_ref);
+    return cstream<C>{std::move(c)};
+  };
   
   std::size_t size() const {
     return _container_ref.size();
@@ -93,15 +88,21 @@ public:
   }
 private:
   C __moved;
-  C &_container_ref;
-  
-  template<typename T> auto get_inserter(T &t) -> decltype(t.push_back({}), std::back_inserter<T>(t)) {
-    return std::back_inserter(t);
+  C &_container_ref;  
+};
+
+template<typename C> struct container_accumulate {
+  typedef typename C::value_type value_type;
+  C &operator()(C &dest, const C &source) const {
+    std::copy(std::begin(source), std::end(source), std::inserter(dest, std::end(dest) ) );
+    return dest;
   }
-  template<typename T> auto get_inserter(T &t) -> decltype(t.insert({}), std::inserter<T>(t, t.end())) {
-    return std::inserter(t, t.end());
+};
+
+template<typename V> struct identity {
+  V operator()(const V &v) const {
+    return v;
   }
-  
 };
 
 template<typename T> cstream<T> make_stream(T &t) {

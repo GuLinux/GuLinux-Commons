@@ -42,7 +42,7 @@ TEST(ContainersStream, transform) {
 
 TEST(ContainersStream, transform_to_set) {
   auto c = make_stream(vector<int>{1, 3, 34, 6, 3});
-  set<int> actual = c.sorted().transform<set<int>>([](int a){ return a; });
+  set<int> actual = c.sorted().transform<set<int>>(identity<int>{});
   set<int> expected{1, 3, 34, 6};
   ASSERT_EQ(expected, actual);
 }
@@ -120,6 +120,25 @@ TEST(ContainersStream, count_and_size) {
   ASSERT_EQ(2, c.count([](int i) {return i < 6; }));
 }
 
+
+TEST(ContainersStream, flatten) {
+  auto c = make_stream(vector<vector<int>>{ {1,2,3}, {4,5,6}, {7,8,9} });
+  vector<int> expected{1,2,3,4,5,6,7,8,9};
+  auto actual = c.accumulate({}, container_accumulate<vector<int>>{});
+  ASSERT_EQ(expected, actual);
+}
+
+TEST(ContainersStream, copy) {
+  vector<int> v{1,2,3};
+  vector<int> expected{1,2,3};
+  auto c = make_stream(v);
+  expected[1]++; v[1]++;
+  ASSERT_EQ(expected, c.ref());
+  auto c_copy = c.copy();
+  v[1]++;
+  ASSERT_EQ(expected, c_copy.ref());
+}
+
 #define VECTOR_SIZE 50000000
 TEST(BenchmarkContainersStream, ref_constructor) {
   vector<long> v(VECTOR_SIZE);
@@ -135,8 +154,6 @@ TEST(BenchmarkContainersStream, ref_helper) {
 TEST(BenchmarkContainersStream, move_constructor) {
   cstream<vector<long>> c{vector<long>(VECTOR_SIZE)};
 }
-
-
 
 TEST(BenchmarkContainersStream, move_helper) {
  auto c = make_stream(vector<long>(VECTOR_SIZE));
