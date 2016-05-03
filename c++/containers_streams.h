@@ -21,6 +21,8 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
+
+#include <iostream>
 namespace GuLinux {
 template<typename C>
 class cstream {
@@ -101,6 +103,13 @@ private:
   }
   
 };
+
+template<typename T> cstream<T> make_stream(T &t) {
+  return cstream<T>{t};
+}
+template<typename T> cstream<T> make_stream(T &&t) {
+  return cstream<T>{std::forward<T>(t)};
+}
 }
 
 #endif
