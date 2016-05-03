@@ -37,11 +37,30 @@ public:
     std::sort(std::begin(_container_ref), std::end(_container_ref), op);
     return *this;
   }
+  
   template<typename T, typename Op>
   cstream<T> transform(Op transform_f) {
     T dest;
-    std::transform(std::begin(_container_ref), std::end(_container_ref), get_inserter(dest), transform_f);
+    std::transform(std::begin(_container_ref), std::end(_container_ref), std::inserter(dest, std::end(dest)), transform_f);
     return {std::move(dest)};
+  }
+  
+  template<typename Op>
+  cstream<C> &remove(Op remove_f) {
+    _container_ref.erase(std::remove_if(std::begin(_container_ref), std::end(_container_ref), remove_f), std::end(_container_ref));
+    return *this;
+  }
+  
+    
+  template<typename Op>
+  cstream<C> &filter(Op filter) {
+    return remove([&](const value_type &v) { return ! filter(v); });
+  }
+  
+  
+  template<typename Op = std::plus<value_type>>
+  value_type accumulate(value_type initial = {}, Op op = {}) {
+    return std::accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
   }
   
 private:

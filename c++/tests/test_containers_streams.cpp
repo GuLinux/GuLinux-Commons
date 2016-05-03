@@ -47,3 +47,40 @@ TEST(ContainersStream, transform_to_set) {
   ASSERT_EQ(expected, actual);
 }
 
+
+TEST(ContainersStream, transform_to_map) {
+  cstream<vector<int>> c{{1, 3, 34, 6, 3}};
+  map<int, int> actual = c.sorted().transform<map<int, int>>([](int a){ return make_pair(a+1, a); });
+  map<int, int> expected{ {2, 1}, {4, 3}, {35, 34}, {7, 6}};
+  ASSERT_EQ(expected, actual);
+}
+
+
+TEST(ContainersStream, remove) {
+  cstream<vector<int>> c{{1, 5, 34, 6, 3}};
+  vector<int> actual = c.remove([](int a){ return a %2 == 0; });
+  vector<int> expected{1, 5, 3};
+  ASSERT_EQ(expected, actual);
+}
+
+
+
+TEST(ContainersStream, filter) {
+  cstream<vector<int>> c{{1, 5, 34, 6, 3}};
+  vector<int> actual = c.filter([](int a){ return a %2 != 0; });
+  vector<int> expected{1, 5, 3};
+  ASSERT_EQ(expected, actual);
+}
+
+TEST(ContainersStream, accumulate) {
+  cstream<vector<int>> c{{1, 5, 34, 6, 3}};
+  int actual = c.accumulate();
+  ASSERT_EQ(49, actual);
+}
+
+
+TEST(ContainersStream, accumulate_custom) {
+  cstream<vector<int>> c{{1, 5, 6}};
+  int actual = c.accumulate(3, [](int initial, int current){ return initial*current; });
+  ASSERT_EQ(90, actual);
+}
