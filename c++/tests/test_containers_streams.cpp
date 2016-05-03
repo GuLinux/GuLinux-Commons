@@ -120,7 +120,7 @@ TEST(ContainersStream, accumulate_custom) {
 
 TEST(ContainersStream, accumulate_custom2) {
   auto c = make_stream(vector<string>{"a1", "b5", "c6"});
-  string actual = c.accumulate(string{}, [](string initial, string current){ return initial.empty() ? current : initial  + " " + current; });
+  string actual = c.accumulate(string{}, join_accumulate<string>{" "});
   ASSERT_EQ("a1 b5 c6", actual);
 }
 

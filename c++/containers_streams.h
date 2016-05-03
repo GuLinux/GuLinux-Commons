@@ -129,6 +129,16 @@ template<typename V> struct identity {
   }
 };
 
+
+
+template<typename C, typename Add = std::plus<C>> struct join_accumulate {
+  C separator;
+  Add adder;
+  C operator()(C &dest, const C &source) const {
+    return dest == C{} ? source : adder(adder(dest, separator), source);
+  }
+};
+
 template<typename T> cstream<T> make_stream(T &t) {
   return cstream<T>{t};
 }
