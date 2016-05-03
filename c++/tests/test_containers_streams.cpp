@@ -84,3 +84,38 @@ TEST(ContainersStream, accumulate_custom) {
   int actual = c.accumulate(3, [](int initial, int current){ return initial*current; });
   ASSERT_EQ(90, actual);
 }
+
+
+TEST(ContainersStream, accumulate_custom2) {
+  cstream<vector<string>> c{{"a1", "b5", "c6"}};
+  string actual = c.accumulate(string{}, [](string initial, string current){ return initial.empty() ? current : initial  + " " + current; });
+  ASSERT_EQ("a1 b5 c6", actual);
+}
+
+
+TEST(ContainersStream, foreach) {
+  cstream<vector<int>> c{{1, 5, 6}};
+  int sum = 0;
+  c.for_each([&](int i) {sum += i; });
+  ASSERT_EQ(12, sum);
+}
+
+
+TEST(ContainersStream, all_any_none_of) {
+  cstream<vector<int>> c{{1, 5, 7}};
+  ASSERT_TRUE(c.all([](int i){ return i%2 == 1; }));
+  ASSERT_FALSE(c.all([](int i){ return i < 7; }));
+  
+  ASSERT_TRUE(c.any([](int i){ return i < 7; }));
+  ASSERT_FALSE(c.any([](int i){ return i < 1; }));
+  
+  ASSERT_TRUE(c.none([](int i){ return i < 1; }));
+  ASSERT_FALSE(c.none([](int i){ return i < 7; }));
+}
+
+
+TEST(ContainersStream, count_and_size) {
+  cstream<vector<int>> c{{1, 5, 6}};
+  ASSERT_EQ(3, c.size());
+  ASSERT_EQ(2, c.count([](int i) {return i < 6; }));
+}

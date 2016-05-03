@@ -32,37 +32,63 @@ public:
   operator C&&() { return std::move(_container_ref); }
   
   // Operations
-  template<typename Op = std::less<value_type>>
-  cstream<C> &sorted(const Op &op = {}) {
+  template<typename BinaryFunction = std::less<value_type>>
+  cstream<C> &sorted(const BinaryFunction &op = {}) {
     std::sort(std::begin(_container_ref), std::end(_container_ref), op);
     return *this;
   }
   
-  template<typename T, typename Op>
-  cstream<T> transform(Op transform_f) {
+  template<typename T, typename UnaryFunction>
+  cstream<T> transform(UnaryFunction transform_f) const {
     T dest;
     std::transform(std::begin(_container_ref), std::end(_container_ref), std::inserter(dest, std::end(dest)), transform_f);
     return {std::move(dest)};
   }
   
-  template<typename Op>
-  cstream<C> &remove(Op remove_f) {
+  template<typename UnaryFunction>
+  cstream<C> &remove(UnaryFunction remove_f) {
     _container_ref.erase(std::remove_if(std::begin(_container_ref), std::end(_container_ref), remove_f), std::end(_container_ref));
     return *this;
   }
   
     
-  template<typename Op>
-  cstream<C> &filter(Op filter) {
+  template<typename UnaryFunction>
+  cstream<C> &filter(UnaryFunction filter) {
     return remove([&](const value_type &v) { return ! filter(v); });
   }
   
   
-  template<typename Op = std::plus<value_type>>
-  value_type accumulate(value_type initial = {}, Op op = {}) {
+  template<typename UnaryFunction = std::plus<value_type>>
+  value_type accumulate(value_type initial = {}, UnaryFunction op = {}) const {
     return std::accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
   }
   
+  template<typename UnaryFunction>
+  cstream<C> &for_each(UnaryFunction f) {
+    std::for_each(std::begin(_container_ref), std::end(_container_ref), f);
+    return *this;
+  }
+  
+  template<typename UnaryFunction>
+  bool all(UnaryFunction f) const {
+    return std::all_of(std::begin(_container_ref), std::end(_container_ref), f);
+  }
+  template<typename UnaryFunction>
+  bool any(UnaryFunction f) const {
+    return std::any_of(std::begin(_container_ref), std::end(_container_ref), f);
+  }
+  template<typename UnaryFunction>
+  bool none(UnaryFunction f) const {
+    return std::none_of(std::begin(_container_ref), std::end(_container_ref), f);
+  }
+  
+  std::size_t size() const {
+    return _container_ref.size();
+  }
+  template<typename UnaryFunction>
+  std::size_t count(UnaryFunction f) const {
+    return std::count_if(std::begin(_container_ref), std::end(_container_ref), f);
+  }
 private:
   C __moved;
   C &_container_ref;
