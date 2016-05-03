@@ -21,12 +21,15 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
-
+#include <list>
 #include <iostream>
 namespace GuLinux {
 template<typename C> class cstream {
 public:
+
   typedef typename C::value_type value_type;
+  typedef decltype(C{}.begin()) it_type;
+
   cstream(C &c) : _container_ref{c} {}
   cstream(C &&c) : __moved{c}, _container_ref{__moved} {}
   C &ref() { return _container_ref; }
@@ -44,14 +47,35 @@ public:
     return {std::move(dest)};
   }
   
-  template<typename UnaryFunction> cstream<C> &remove(UnaryFunction remove_f) {
+  template<typename UnaryFunction> cstream<C> & remove(UnaryFunction remove_f) {
     _container_ref.erase(std::remove_if(std::begin(_container_ref), std::end(_container_ref), remove_f), std::end(_container_ref));
+    return *this;
+  }
+  
+  template<typename UnaryFunction> cstream<C> & remove_ms(UnaryFunction remove_f) {
+    std::list<it_type> to_remove;
+    for(auto it = _container_ref.begin(); it != _container_ref.end(); ++it) {
+      if(remove_f(*it))
+	to_remove.push_back(it);
+    }
+    for(auto it: to_remove)
+      _container_ref.erase(it);
+    return *this;
+  }
+  
+  
+  template<typename ValueType> cstream<C> &erase(ValueType v) {
+    _container_ref.erase(v);
     return *this;
   }
   
     
   template<typename UnaryFunction> cstream<C> &filter(UnaryFunction filter) {
     return remove([&](const value_type &v) { return ! filter(v); });
+  }
+  
+  template<typename UnaryFunction> cstream<C> &filter_ms(UnaryFunction filter) {
+    return remove_ms([&](const value_type &v) { return ! filter(v); });
   }
   
   

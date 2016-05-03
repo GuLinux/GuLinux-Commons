@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <set>
 #include <map>
+#include <unordered_map>
+#include <list>
 #include "containers_streams.h"
 using namespace GuLinux;
 using namespace std;
@@ -65,10 +67,40 @@ TEST(ContainersStream, remove) {
 
 
 
+TEST(ContainersStream, erase_on_map) {
+  map<string, int> my_map_expected{ {"3", 3}, {"4", 4} };
+  map<string, int> actual = make_stream(map<string, int>{ {"2", 2}, {"3", 3}, {"4", 4} }).remove_ms([](const pair<string,int> &p) { return p.second == 2; });
+  ASSERT_EQ(my_map_expected, actual);
+}
+
+
+TEST(ContainersStream, erase_on_set) {
+  set<int> expected{1, 3, 5};
+  set<int> actual = make_stream(set<int>{1, 2, 3, 4, 5}).remove_ms([](int i) { return i%2==0; });
+  ASSERT_EQ(expected, actual);
+}
+
+
+
 TEST(ContainersStream, filter) {
   auto c = make_stream(vector<int>{1, 5, 34, 6, 3});
   vector<int> actual = c.filter([](int a){ return a %2 != 0; });
   vector<int> expected{1, 5, 3};
+  ASSERT_EQ(expected, actual);
+}
+
+
+TEST(ContainersStream, filter_map) {
+  auto c = make_stream(map<int, string>{ {1, "1"}, {5, "5"}, {34, "34"} } );
+  map<int, string> actual = c.filter_ms( [](const pair<int, string> &a){ return a.first %2 != 0; } );
+  map<int, string> expected{ {1, "1"}, {5, "5"} };
+  ASSERT_EQ(expected, actual);
+}
+
+TEST(ContainersStream, filter_unordered_map) {
+  auto c = make_stream(unordered_map<int, string>{ {1, "1"}, {5, "5"}, {34, "34"} } );
+  unordered_map<int, string> actual = c.filter_ms( [](const pair<int, string> &a){ return a.first %2 != 0; } );
+  unordered_map<int, string> expected{ {1, "1"}, {5, "5"} };
   ASSERT_EQ(expected, actual);
 }
 
@@ -138,6 +170,22 @@ TEST(ContainersStream, copy) {
   v[1]++;
   ASSERT_EQ(expected, c_copy.ref());
 }
+
+
+TEST(ContainersStream, typical_usage) {
+  vector<int> v{1,2,3,4,5};
+  list<pair<int, string>> expected{ {2, "1c"}, {3, "2c"}, {6, "5c"} };
+  list<pair<int, string>> actual = make_stream(v)
+    .transform<map<string, int>>([](int i){ stringstream s; s << i; return make_pair(s.str(), i); })
+    .erase("3")
+    .transform<list<pair<int, string>>>([](const pair<string, int> &p){ return make_pair(p.second, p.first); })
+    .remove([](const pair<int, string> &p){ return p.first == 4; })
+    .for_each([](pair<int, string> &p) { p.first++; p.second += "c"; });
+    ;
+  ASSERT_EQ(expected, actual);
+}
+
+
 
 #define VECTOR_SIZE 50000000
 TEST(BenchmarkContainersStream, ref_constructor) {
