@@ -7,7 +7,7 @@
 #ifdef IN_IDE_PARSER
 #define _q + QString()
 #else
-inline QString operator ""_q(const char *s, std::size_t) { return QString{s}; }
+inline QString operator "" _q(const char *s, std::size_t) { return QString{s}; }
 #endif
 
 template<typename T>
