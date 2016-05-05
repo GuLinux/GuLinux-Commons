@@ -22,8 +22,27 @@
 #include <algorithm>
 #include <functional>
 #include <list>
+#include <vector>
 #include <iostream>
 namespace GuLinux {
+  
+  
+template<typename C> struct container_accumulate {
+  typedef typename C::value_type value_type;
+  C &operator()(C &dest, const C &source) const {
+    std::copy(std::begin(source), std::end(source), std::inserter(dest, std::end(dest) ) );
+    return dest;
+  }
+};
+
+template<typename V> struct identity {
+  V operator()(const V &v) const {
+    return v;
+  }
+};
+
+
+  
 template<typename C> class cstream {
 public:
 
@@ -110,25 +129,23 @@ public:
   std::size_t count(UnaryFunction f) const {
     return std::count_if(std::begin(_container_ref), std::end(_container_ref), f);
   }
+  
+  value_type min() const {
+    return *std::min_element(std::begin(_container_ref), std::end(_container_ref));
+  }
+  
+  value_type max() const {
+    return *std::max_element(std::begin(_container_ref), std::end(_container_ref));
+  }
+  
+  double mean() const {
+    return static_cast<double>(accumulate()) / static_cast<double>(size());
+  }
+  
 private:
   C __moved;
   C &_container_ref;  
 };
-
-template<typename C> struct container_accumulate {
-  typedef typename C::value_type value_type;
-  C &operator()(C &dest, const C &source) const {
-    std::copy(std::begin(source), std::end(source), std::inserter(dest, std::end(dest) ) );
-    return dest;
-  }
-};
-
-template<typename V> struct identity {
-  V operator()(const V &v) const {
-    return v;
-  }
-};
-
 
 
 template<typename C, typename Add = std::plus<C>> struct join_accumulate {

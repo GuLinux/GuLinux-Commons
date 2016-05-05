@@ -171,6 +171,13 @@ TEST(ContainersStream, copy) {
   ASSERT_EQ(expected, c_copy.ref());
 }
 
+TEST(ContainersStream, min_max_mean) {
+  auto stream = make_stream(vector<int>{5, 3, 6, 1, 7, 3, 5, 2, 9, 0, 20, 2});
+  ASSERT_EQ(0, stream.min());
+  ASSERT_EQ(20, stream.max());
+  ASSERT_EQ(5.25, stream.mean());
+}
+
 
 TEST(ContainersStream, typical_usage) {
   vector<int> v{1,2,3,4,5};
@@ -187,7 +194,7 @@ TEST(ContainersStream, typical_usage) {
 
 
 
-#define VECTOR_SIZE 50000000
+#define VECTOR_SIZE 10000000
 TEST(BenchmarkContainersStream, ref_constructor) {
   vector<long> v(VECTOR_SIZE);
   cstream<vector<long>> c{v};
