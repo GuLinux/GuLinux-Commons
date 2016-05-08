@@ -173,6 +173,9 @@ template<typename T> cstream<T> make_stream(T &t) {
 template<typename T> cstream<T> make_stream(T &&t) {
   return cstream<T>{std::forward<T>(t)};
 }
+template<typename T> cstream<T> make_stream_copy(const T &t) {
+  return cstream<T>{T{t}};
+}
 }
 
 #endif

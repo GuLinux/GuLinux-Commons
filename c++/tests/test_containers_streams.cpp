@@ -20,6 +20,14 @@ TEST(ContainersStream, acceptsContainerMove) {
   ASSERT_EQ(foo, actual);
 }
 
+TEST(ContainersStream, acceptsConstRef) {
+  vector<int> foo{1,2,4,6,8,10};
+  auto mk_stream_f = [](const vector<int> &v) { return make_stream_copy(v); };
+  auto c = mk_stream_f(vector<int>{1,2,4,6,8,10});
+  vector<int> actual = c;
+  ASSERT_EQ(foo, actual);
+}
+
 TEST(ContainersStream, sort) {
   auto c = make_stream(vector<int>{1, 5, 34, 6, 3});
   vector<int> actual = c.sorted();
