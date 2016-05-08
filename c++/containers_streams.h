@@ -52,8 +52,10 @@ public:
 
   cstream(C &c) : _container_ref{c} {}
   cstream(C &&c) : __moved{c}, _container_ref{__moved} {}
-  C &ref() { return _container_ref; }
-  operator C&&() { return std::move(_container_ref); }
+  C &get_ref() { return _container_ref; }
+  C &&get_move() { return std::move(_container_ref); }
+  C get() const { return _container_ref; }
+  operator C&&() { return get_move(); }
   
   // Operations
   template<typename BinaryFunction = std::less<value_type>> cstream<C> &sorted(const BinaryFunction &op = {}) {
@@ -100,7 +102,7 @@ public:
   
   
   template<typename UnaryFunction = std::plus<value_type>> value_type accumulate(value_type initial = {}, UnaryFunction op = {}) const {
-    return accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
+    return std::accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
   }
   
   template<typename UnaryFunction> cstream<C> &for_each(UnaryFunction f) {

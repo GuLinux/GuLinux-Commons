@@ -10,7 +10,7 @@ TEST(ContainersStream, acceptsContainerReference) {
   vector<int> foo{1,2,4,6,8,10};
   auto c = make_stream(foo);
   
-  ASSERT_EQ(foo, c.ref());
+  ASSERT_EQ(foo, c.get_ref());
 }
 
 TEST(ContainersStream, acceptsContainerMove) {
@@ -174,10 +174,10 @@ TEST(ContainersStream, copy) {
   vector<int> expected{1,2,3};
   auto c = make_stream(v);
   expected[1]++; v[1]++;
-  ASSERT_EQ(expected, c.ref());
+  ASSERT_EQ(expected, c.get_ref());
   auto c_copy = c.copy();
   v[1]++;
-  ASSERT_EQ(expected, c_copy.ref());
+  ASSERT_EQ(expected, c_copy.get_ref());
 }
 
 TEST(ContainersStream, min_max_mean) {
@@ -209,7 +209,7 @@ TEST(BenchmarkContainersStream, ref_constructor) {
   cstream<vector<long>> c{v};
 }
 
-TEST(BenchmarkContainersStream, ref_helper) {
+TEST(BenchmarkContainersStream, _helper) {
   vector<long> v(VECTOR_SIZE);
   auto c = make_stream(v);
 }
