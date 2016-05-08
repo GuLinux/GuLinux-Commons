@@ -1,4 +1,5 @@
 /*
+ * Copied by https://github.com/GuLinux/GuLinux-Commons/blob/master/c%2B%2B/containers_streams.h
  * Copyright (C) 2016 Marco Gulino <marco@gulinux.net>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,6 +20,7 @@
 #define GULINUX_COMMONS_CONTAINERS_STREAMS
 #include <utility>
 #include <algorithm>
+#include <numeric>
 #include <functional>
 #include <list>
 #include <vector>
@@ -98,7 +100,7 @@ public:
   
   
   template<typename UnaryFunction = std::plus<value_type>> value_type accumulate(value_type initial = {}, UnaryFunction op = {}) const {
-    return std::accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
+    return accumulate(std::begin(_container_ref), std::end(_container_ref), initial, op);
   }
   
   template<typename UnaryFunction> cstream<C> &for_each(UnaryFunction f) {
@@ -164,3 +166,4 @@ template<typename T> cstream<T> make_stream(T &&t) {
 }
 
 #endif
+
