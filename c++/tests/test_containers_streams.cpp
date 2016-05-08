@@ -152,6 +152,15 @@ TEST(ContainersStream, count_and_size) {
   ASSERT_EQ(2, c.count([](int i) {return i < 6; }));
 }
 
+TEST(ContainersStream, retval) {
+  vector<int> expected{1, 5, 6};
+  struct X {
+    vector<int> y() const { return make_stream(vector<int>{1, 5, 6}); }
+  };
+  X x;
+  ASSERT_EQ(expected, x.y());
+}
+
 
 TEST(ContainersStream, flatten) {
   auto c = make_stream(vector<vector<int>>{ {1,2,3}, {4,5,6}, {7,8,9} });
