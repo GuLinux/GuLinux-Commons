@@ -132,6 +132,14 @@ public:
   std::size_t count(UnaryFunction f) const {
     return std::count_if(std::begin(_container_ref), std::end(_container_ref), f);
   }
+  std::size_t count(const value_type &v) const {
+    return std::count(std::begin(_container_ref), std::end(_container_ref), v);
+  }
+  
+  std::size_t contains(const value_type &value) const {
+    return any([&](const value_type &v){ return value == v; });
+  }
+
   
   value_type min() const {
     return *std::min_element(std::begin(_container_ref), std::end(_container_ref));

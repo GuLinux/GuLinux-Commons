@@ -150,7 +150,11 @@ TEST(ContainersStream, count_and_size) {
   auto c = make_stream(vector<int>{1, 5, 6});
   ASSERT_EQ(3, c.size());
   ASSERT_EQ(2, c.count([](int i) {return i < 6; }));
+  ASSERT_EQ(1, c.count(5));
+  ASSERT_TRUE( c.contains(5) );
+  ASSERT_FALSE( c.contains(4) );
 }
+
 
 TEST(ContainersStream, retval) {
   vector<int> expected{1, 5, 6};
