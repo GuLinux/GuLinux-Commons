@@ -223,6 +223,12 @@ TEST(ContainersStream, first_with_predicate) {
 }
 
 
+TEST(ContainersStream, copy_from_array) {
+  const char *data[] = {"hello", "world", "1", "2", "3"};
+  ASSERT_EQ( (vector<string>{"hello", "world", "1", "2", "3"}),( cpstream<string>(data, 5).get() ) );
+}
+
+
 TEST(ContainersStream, typical_usage) {
   vector<int> v{1,2,3,4,5};
   list<pair<int, string>> expected{ {2, "1c"}, {3, "2c"}, {6, "5c"} };

@@ -192,6 +192,13 @@ template<typename T> cstream<T> make_stream(T &&t) {
 template<typename T> cstream<T> make_stream_copy(const T &t) {
   return cstream<T>{T{t}};
 }
+template<typename N, typename T = N> cstream<std::vector<N>> cpstream(T *t, std::size_t size) {
+  std::vector<N> data(size);
+  std::copy_n(t, size, data.begin());
+  return make_stream(std::move(data));
+}
+
+
 }
 
 #endif
