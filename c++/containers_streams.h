@@ -1,5 +1,4 @@
 /*
- * Copied by https://github.com/GuLinux/GuLinux-Commons/blob/master/c%2B%2B/containers_streams.h
  * Copyright (C) 2016 Marco Gulino <marco@gulinux.net>
  *
  * This program is free software: you can redistribute it and/or modify
