@@ -199,6 +199,29 @@ TEST(ContainersStream, min_max_mean) {
   ASSERT_EQ(5.25, stream.mean());
 }
 
+TEST(ContainersStream, first) {
+  ASSERT_TRUE( make_stream<vector<int>>({5, 2, 3}).first() );
+  ASSERT_EQ(5, *make_stream<vector<int>>({5, 2, 3}).first() );
+  ASSERT_FALSE( make_stream<vector<int>>({}).first() );
+  ASSERT_FALSE( make_stream<list<int>>({}).first() );
+  ASSERT_EQ(5, *make_stream<list<int>>({5, 2, 3}).first() );
+}
+
+TEST(ContainersStream, first_with_predicate) {
+  auto is_even = [](int n) { return n%2 == 0; };
+  auto gt_5 = [](int n) { return n > 5; };
+  ASSERT_TRUE( make_stream<vector<int>>({5, 2, 3}).first( is_even ) );
+  ASSERT_EQ(2, *make_stream<vector<int>>({5, 2, 3}).first( is_even ) );
+  
+  ASSERT_FALSE( make_stream<vector<int>>({5, 2, 3}).first(gt_5) );
+  ASSERT_FALSE( make_stream<list<int>>({5, 2, 3}).first(gt_5) );
+  
+  ASSERT_FALSE( make_stream<vector<int>>({}).first(is_even) );
+  ASSERT_FALSE( make_stream<list<int>>({}).first(is_even) );
+  
+  ASSERT_EQ(2, *make_stream<list<int>>({5, 2, 3}).first(is_even) );
+}
+
 
 TEST(ContainersStream, typical_usage) {
   vector<int> v{1,2,3,4,5};

@@ -25,6 +25,8 @@
 #include <list>
 #include <vector>
 #include <iostream>
+#include "optional.h"
+
 namespace GuLinux {
   
   
@@ -151,6 +153,20 @@ public:
   
   double mean() const {
     return static_cast<double>(accumulate()) / static_cast<double>(size());
+  }
+  
+  optional<value_type> first() const {
+    if(std::begin(_container_ref) == std::end(_container_ref) )
+      return {};
+    return { *std::begin(_container_ref) };
+  }
+  
+  template<typename UnaryFunction>
+  optional<value_type> first(UnaryFunction f) const {
+    auto it = std::find_if( std::begin(_container_ref), std::end(_container_ref), f );
+    if(it == std::end(_container_ref))
+      return {};
+    return { *it };
   }
   
 private:
