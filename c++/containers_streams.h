@@ -188,6 +188,12 @@ template<typename C, typename Add = std::plus<C>> struct join_accumulate {
   }
 };
 
+template<typename A, typename B> struct Pair {
+  static A first(const std::pair<A, B> &p) { return p.first; }
+  static B second(const std::pair<A, B> &p) { return p.second; }
+};
+
+
 template<typename T> cstream<T> make_stream(T &t) {
   return cstream<T>{t};
 }
