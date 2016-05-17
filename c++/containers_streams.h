@@ -97,6 +97,12 @@ public:
     return remove([&](const value_type &v) { return ! filter(v); });
   }
   
+  template<typename UnaryFunction> cstream<C> cp_filter(UnaryFunction filter) {
+    C c;
+    std::copy_if(std::begin(_container_ref), std::end(_container_ref), std::inserter(c, std::end(c)), filter);
+    return cstream<C>(std::move(c));
+  }
+  
   template<typename UnaryFunction> cstream<C> &filter_ms(UnaryFunction filter) {
     return remove_ms([&](const value_type &v) { return ! filter(v); });
   }
