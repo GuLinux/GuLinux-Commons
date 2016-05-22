@@ -143,7 +143,7 @@ public:
     return std::count(std::begin(_container_ref), std::end(_container_ref), v);
   }
   
-  std::size_t contains(const value_type &value) const {
+  bool contains(const value_type &value) const {
     return any([&](const value_type &v){ return value == v; });
   }
 
