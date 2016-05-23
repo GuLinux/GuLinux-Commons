@@ -26,8 +26,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include "containers_stream.h"
-
 namespace GuLinux {
 class Scope {
 public:
