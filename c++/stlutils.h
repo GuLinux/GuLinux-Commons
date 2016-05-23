@@ -25,6 +25,8 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <numeric>
+
 
 namespace GuLinux {
 class Scope {
