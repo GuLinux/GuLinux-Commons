@@ -1,12 +1,13 @@
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/googletest/CMakeLists.txt")
+  add_subdirectory(googletest)
+  LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/")
+  message("Modules path: ${CMAKE_MODULE_PATH}")
+  include(add_gtest)
   include_directories(.. googletest/googletest/include/)
+  
+  add_gtest(NAME containers_stream TYPE unit SOURCES test_containers_streams.cpp )
+  add_gtest(NAME test_optional TYPE unit SOURCES test_optional.cpp )
 
-  add_executable(test_containers_streams test_containers_streams.cpp)
-  target_link_libraries(test_containers_streams gtest_main)
-  add_test(test_containers_streams test_containers_streams)
-
-  add_executable(test_optional test_optional.cpp)
-  target_link_libraries(test_optional gtest_main)
-  add_test(test_optional test_optional)
-
+else(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/googletest/CMakeLists.txt")
+  message(WARNING "Tests are enabled but googletest submodule was not found")
 endif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/googletest/CMakeLists.txt")
