@@ -1,2 +1,11 @@
+cmake_minimum_required(VERSION 2.8.11)
+project(GuLinux-Commons-c++)
+enable_testing()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 find_package(Boost REQUIRED)
 add_library(GuLinux_c++_Commons STATIC settings.cpp)
+option(enable_gulinux_commons_cpp_testing "Enable GuLinux-Commons c++ module testing" Off)
+if(enable_gulinux_commons_cpp_testing)
+  add_subdirectory(tests)
+endif(enable_gulinux_commons_cpp_testing)
+  
