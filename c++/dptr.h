@@ -15,11 +15,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef D_PTR_H
-#define D_PTR_H
+#ifndef CPP_DPTR_H
+#define CPP_DPTR_H
+
+#if __cplusplus > 199711L
+// Use std::unique_ptr instead of custom ptr class
+// Use new uniform initializer to avoid unnecessary constructor definition
 #include <memory>
+template<typename T> using UniqueDPTR = std::unique_ptr<T>;
+#define dptr(...) d(new Private{__VA_ARGS__})
 
-#define D_PTR class Private; friend class Private; const std::unique_ptr<Private> d;
-#define dptr(...) d{new Private{__VA_ARGS__}}
+#else // __cplusplus
+// Simple std::unique_ptr replacement class
+// Doesn't aim to be a fully featured unique_ptr, but just a very basic ptr wrapper with automatic deletion for dptr.
+template<typename T> class UniqueDPTR {
+public:
+    UniqueDPTR(T *t) : ptr(t) {}
+    ~UniqueDPTR() { delete ptr; }
+    T *get() const { return ptr; }
+    T &operator*() const { return *get(); }
+    T *operator->() const { return get(); }
+private:
+    T *ptr;
+    UniqueDPTR(UniqueDPTR &); // Disable copy constructor
+    UniqueDPTR &operator=(const UniqueDPTR &); // Disable assignment
+};
 
-#endif
+#define dptr(...) d(new Private(__VA_ARGS__))
+#define DPTR_IMPL(_class) struct _class::Private
+
+#endif // __cplusplus
+
+#define DPTR struct Private; friend struct Private; const UniqueDPTR<Private> d;
+
+#endif // CPP_DPTR_H
+
