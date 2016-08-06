@@ -42,10 +42,10 @@ private:
 };
 
 #define dptr(...) d(new Private(__VA_ARGS__))
-#define DPTR_IMPL(_class) struct _class::Private
 
 #endif // __cplusplus
 
+#define DPTR_IMPL(_class) struct _class::Private
 #define DPTR struct Private; friend struct Private; const UniqueDPTR<Private> d;
 
 #endif // CPP_DPTR_H
