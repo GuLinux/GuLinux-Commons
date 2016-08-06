@@ -32,7 +32,7 @@ public:
     static QEvent::Type type;
     void run();
 private:
-  D_PTR
+  DPTR
 };
 
 #endif // QLAMBDAEVENT_H

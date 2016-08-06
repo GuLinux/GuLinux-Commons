@@ -193,7 +193,7 @@ namespace WtCommons
       MigrateDbo( Wt::Dbo::Session &session, Wt::Dbo::SqlConnection *connection, const Migrations &migrations, const std::string &tablename = "wt_migrations" );
       ~MigrateDbo();
     private:
-      D_PTR
+      DPTR
   };
 }
 #endif // DBMIGRATIONMANAGER_H

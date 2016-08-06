@@ -51,7 +51,7 @@ public slots:
 protected:
     virtual void resizeEvent(QResizeEvent * e);
 private:
-  D_PTR
+  DPTR
 };
 
 #endif // ZOOMABLEIMAGE_H

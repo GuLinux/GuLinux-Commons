@@ -36,7 +36,7 @@ public:
   virtual bool resolveKey(const std::string& key, std::string& result);
   virtual ~WHTMLTemplatesLocalizedStrings();
 private:
-  D_PTR
+  DPTR
 };
 
 

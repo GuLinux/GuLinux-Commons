@@ -15,7 +15,7 @@ namespace WtCommons {
     WForm *add(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
     WContainerWidget *addControl(Wt::WWidget *w, const std::string &labelKey = std::string(), bool isFormControl = true);
   private:
-    D_PTR
+    DPTR
   };
 
 } // namespace WtCommons

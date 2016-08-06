@@ -35,7 +35,7 @@ public:
     CompositeResource(Wt::WObject* parent = 0);
     CompositeResource *add(std::string pathInfo, Wt::WResource *resource);
 private:
-  D_PTR
+  DPTR
 };
 }
 
