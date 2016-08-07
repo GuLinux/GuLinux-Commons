@@ -41,13 +41,15 @@ class ZoomableImage::Private {
 public:
   class GraphicsView : public QGraphicsView {
   public:
-    GraphicsView(QWidget *parent = 0);
+    GraphicsView(ZoomableImage *q, QWidget *parent = 0);
     enum {FreeZoom, RealSize, FitToWindow} zoomMode = RealSize;
     bool selectionMode = false;
     QRectF selectionRect;
     QGraphicsRectItem *selection = 0;
   protected:
     virtual void mouseReleaseEvent(QMouseEvent*e);
+  private:
+    ZoomableImage *q;
   };
   Private(ZoomableImage *q) : q(q) {}
   GraphicsView *view;
@@ -58,7 +60,7 @@ public:
   QMap<Actions, QAction*> actions;
 };
 
-ZoomableImage::Private::GraphicsView::GraphicsView(QWidget* parent) : QGraphicsView(parent)
+ZoomableImage::Private::GraphicsView::GraphicsView(ZoomableImage *q, QWidget* parent) : QGraphicsView(parent), q{q}
 {
 }
 
@@ -87,7 +89,7 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
   connect(zoomBestFitAction, &QAction::triggered, bind(&ZoomableImage::fitToWindow, this));
   connect(zoomOriginalAction, &QAction::triggered, bind(&ZoomableImage::normalSize, this));
   d->toolbar->setEnabled(false);
-  layout()->addWidget(d->view = new Private::GraphicsView(this));
+  layout()->addWidget(d->view = new Private::GraphicsView(this, this));
   d->view->setScene(&d->scene);
   d->view->setDragMode(QGraphicsView::ScrollHandDrag);
   connect(d->view, &QGraphicsView::rubberBandChanged, [=](QRect a,const QPointF &sceneStart, const QPointF &sceneEnd){
@@ -145,6 +147,7 @@ void ZoomableImage::Private::GraphicsView::mouseReleaseEvent(QMouseEvent* e)
   }
   QGraphicsView::mouseReleaseEvent(e);
   setDragMode(QGraphicsView::ScrollHandDrag);
+  q->selectedROI(selection->rect());
 }
 
 

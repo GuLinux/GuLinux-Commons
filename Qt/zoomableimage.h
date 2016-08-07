@@ -50,6 +50,8 @@ public slots:
   void clearROI();
 protected:
     virtual void resizeEvent(QResizeEvent * e);
+signals:
+  void selectedROI(const QRectF &);
 private:
   DPTR
 };
