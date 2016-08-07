@@ -161,6 +161,7 @@ void ZoomableImage::setImage(const QImage& image)
   d->scene.addPixmap(QPixmap::fromImage(image));
   if(d->view->selection)
     d->scene.addItem(d->view->selection);
+  d->scene.setSceneRect(0, 0, image.size().width(), image.size().height());
 }
 
 QRect ZoomableImage::roi() const
