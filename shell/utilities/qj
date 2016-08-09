@@ -1,0 +1,167 @@
+#!/bin/bash
+# defaults
+
+queue="default"
+clean="false"
+cmd="run"
+
+print_help() {
+    cat >&2 <<EOF
+Usage:
+    $0 [-q|--queue queue] [-c|--clean] [-- command]
+    $0 -l|--list-queue [queue name]
+    $0 --clear-all
+    $0 -d|--delete id
+    $0 --queues
+EOF
+}
+
+queuedb="$HOME/.cache/qj.db"
+
+doquery() {
+    sqlite3 "$queuedb" <<<"$@"
+}
+
+create-schema() {
+    doquery "CREATE TABLE q (
+           id INTEGER PRIMARY KEY,
+           queue TEXT,
+           added TEXT,
+           shpid INTEGER,
+           status INTEGER,
+           exitcode INTEGER,
+           task TEXT
+         );"
+}
+
+print-queues() {
+    doquery "SELECT DISTINCT queue FROM q;"
+}
+
+print-task-header() {
+    echo -e "id|queue|added|status|exitcode|task"
+}
+print-task() {
+    id="$1"
+    queue="$( doquery "SELECT queue FROM q WHERE id = $id;" )"
+    added="$( doquery "SELECT added FROM q WHERE id = $id;" )"
+    status="$( doquery "SELECT status FROM q WHERE id = $id;" )"
+    exitcode="$( doquery "SELECT exitcode FROM q WHERE id = $id;" )"
+    task="$( doquery "SELECT task FROM q WHERE id = $id;" )"
+    case "$status" in
+        0)
+        status="queued"
+        ;;
+        1)
+        status="finished"
+        ;;
+        2)
+        status="failed"
+        ;;
+        3)
+        status="queue failed"
+        ;;
+    esac
+    echo -e "$id|$queue|$added|$status|$exitcode|$task"
+}
+
+print-queue-tasks() {
+    queue="$1"
+    print-task-header
+    doquery "SELECT id FROM q WHERE queue = '$queue' ORDER BY added ASC;" | while read id; do
+        print-task "$id"
+    done
+}
+
+print-tasks() {
+    queues="${@:-$(print-queues)}"
+    for queue in $queues; do
+        echo
+        echo "Queue: $queue"
+        print-queue-tasks "$queue" | column -t -s '|'
+    done
+}
+
+while [ -n "$1" ] && [ "$1" != "--" ]; do
+    case "$1" in
+        -q|--queue)
+            queue="$2"; shift
+            ;;
+        -c|--clean|--clear)
+            clean="true"
+            ;;
+        --clear-all)
+            rm "$queuedb"
+            create-schema
+            exit 0
+            ;;
+        -l|--list-queue)
+            shift
+            print-tasks "$@"
+            exit 0
+            ;;
+        --queues)
+            print-queues
+            exit 0
+            ;;
+        -d|--delete)
+            doquery "DELETE from q WHERE ID = $2;"
+            exit $?
+            ;;
+        *)
+            print_help
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+shift
+
+[ -r "$queuedb" ] || ( mkdir -p "$( dirname "$queuedb")"; create-schema )
+if [ "$clean" = "true" ]; then
+    doquery "DELETE FROM q WHERE queue = '$queue';"
+    [ -z "$@" ] && exit 0
+fi
+
+if [ -z "$1" ]; then
+    print_help
+    exit 1
+fi
+
+#  echo "Queuing $@ to queue name $queue" >&2
+query_text="INSERT INTO q
+    (queue, added, shpid, status, exitcode, task)
+    VALUES('$queue', datetime($( date +%s ), 'unixepoch'), $$, 0, 0, '$( echo "$@" | sed "s/'/''/g" )');
+    select last_insert_rowid();" 
+job_id="$( doquery "$query_text" )"
+#  echo "Job queued, id: $job_id" >&2
+NEEDS_ENDL=false
+while [ "$job_id" != "$( doquery "SELECT id FROM q WHERE status = 0 ORDER BY added ASC LIMIT 1;" )" ]; do
+    echo -n .
+    NEEDS_ENDL=true
+    sleep 1
+done
+[ "$NEEDS_ENDL" = true ] && echo
+
+last_id="$( doquery "select id FROM q where queue = '$queue' AND id <> "$job_id" AND status < 3 order by added DESC LIMIT 1;" )"
+#echo "Last id: $last_id" >&2
+if [ -n "$last_id" ] && [ "$( doquery "SELECT status FROM q WHERE id = $last_id;" )" -ge 2 ]; then
+  echo "[ERROR] Last command on queue $queue exited with an error; skipping queue execution" >&2
+  echo "Command: $(doquery "SELECT task FROM queue WHERE id = $last_id;" ); exit code: $( doquery "SELECT exitcode FROM q WHERE id = $last_id;" )" >&2
+  echo "If you want to clean up the queue, run $0 $queue clean" >&2
+  doquery "UPDATE queue SET status = 3 WHERE id = $job_id;"
+  exit 1
+fi
+
+#echo "Running job $@" >&2
+"$@"
+exit_code="$?"
+#echo "Command exit code: $exit_code" >&2
+if [ "$exit_code" == 0 ]; then
+    status=1
+else
+    status=2
+fi
+doquery "UPDATE q set status = $status, exitcode = $exit_code WHERE id = $job_id;"
+exit "$exit_code"
