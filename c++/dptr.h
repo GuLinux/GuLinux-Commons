@@ -18,7 +18,7 @@
 #ifndef CPP_DPTR_H
 #define CPP_DPTR_H
 
-#if __cplusplus > 199711L
+#if __cplusplus >= 201103L
 // Use std::unique_ptr instead of custom ptr class
 // Use new uniform initializer to avoid unnecessary constructor definition
 #include <memory>
