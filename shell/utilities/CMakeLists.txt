@@ -12,4 +12,5 @@ ssh_forward_audio
 ssh_view_screenshot
 tomp4
 watchpage
+qj
 DESTINATION bin)
