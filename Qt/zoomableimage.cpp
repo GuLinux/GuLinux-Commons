@@ -41,11 +41,11 @@ class ZoomableImage::Private {
 public:
   class GraphicsView : public QGraphicsView {
   public:
-    GraphicsView(ZoomableImage *q, QWidget *parent = 0);
+    GraphicsView(ZoomableImage *q, QWidget *parent = nullptr);
     enum {FreeZoom, RealSize, FitToWindow} zoomMode = RealSize;
     bool selectionMode = false;
     QRectF selectionRect;
-    QGraphicsRectItem *selection = 0;
+    QGraphicsRectItem *selection = nullptr;
   protected:
     virtual void mouseReleaseEvent(QMouseEvent*e);
   private:
@@ -144,10 +144,10 @@ void ZoomableImage::Private::GraphicsView::mouseReleaseEvent(QMouseEvent* e)
     selectionMode = false;
     selection = scene()->addRect(selectionRect, {Qt::green}, {QColor{0, 250, 250, 20}});
     qDebug() << "rect: " << selectionRect << ", " << selection->rect();
+    q->selectedROI(selection->rect());
   }
   QGraphicsView::mouseReleaseEvent(e);
   setDragMode(QGraphicsView::ScrollHandDrag);
-  q->selectedROI(selection->rect());
 }
 
 
