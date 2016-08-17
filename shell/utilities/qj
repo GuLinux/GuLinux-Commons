@@ -121,7 +121,7 @@ shift
 [ -r "$queuedb" ] || ( mkdir -p "$( dirname "$queuedb")"; create-schema )
 if [ "$clean" = "true" ]; then
     doquery "DELETE FROM q WHERE queue = '$queue';"
-    [ -z "$@" ] && exit 0
+    [ -z "$1" ] && exit 0
 fi
 
 if [ -z "$1" ]; then
