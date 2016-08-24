@@ -25,6 +25,8 @@
 #include <chrono>
 #include <iomanip>
 #include <sstream>
+#include <memory>
+#include <ratio>
 #include <numeric>
 
 
@@ -42,35 +44,72 @@ void foreach_point(T x, T y, std::function<void(T, T)> onEach) {
   for(T _y=0; _y<y; _y++) for(T _x=0; _x < x; _x++) onEach(_x, _y);
 }
 
-class benchmark {
+class benchmark : public std::enable_shared_from_this<benchmark>{
 public:
-  typedef std::function<void(const std::string &, int, double)> BenchmarkCall;
-  benchmark(const std::string &name, BenchmarkCall benchmark_f, int print_every = 20) 
-    : name(name), print_every(print_every), benchmark_f(benchmark_f), started{std::chrono::steady_clock::now()} {}
+  typedef std::shared_ptr<benchmark> ptr;
+  typedef std::function<void(const std::string &)> PrintF;
+  benchmark(const std::string &name, PrintF print_function)
+   : name(name),
+   print_every(1), 
+   print_function(print_function), 
+   started{std::chrono::steady_clock::now()},
+   unit_ratio{1},
+   unit_suffix{"s"}
+  {
+  }
   ~benchmark() {
     auto elapsed = std::chrono::duration_cast<std::chrono::duration<double>>( std::chrono::steady_clock::now() - started);
     static std::map<std::string, std::vector<double>> timers;
     timers[name].push_back(elapsed.count());
     if(timers[name].size() >= print_every) {
-      benchmark_f(name, timers[name].size(), std::accumulate(std::begin(timers[name]), std::end(timers[name]), 0.)/timers[name].size());
+      double elapsed_secs = std::accumulate(std::begin(timers[name]), std::end(timers[name]), 0.)/timers[name].size();
+      print_function(elapsed_str(timers[name].size(), elapsed_secs));
       timers[name].clear();
     }
   }
-  template<typename T>
-  static BenchmarkCall benchmark_stream(T &stream, const std::string &prefix = {}) { 
-    return [&](const std::string &name, int elements, double elapsed){ stream << "benchmark " << prefix << name << " (avg): " << std::fixed << std::setprecision(6) << elapsed*1000. << " ms" << std::endl; };
+  std::string elapsed_str(std::size_t calls_count, double secs) const {
+    std::stringstream s;
+    s << "benchmark " << name;
+    if(print_every > 1)
+      s << " (avg of " << calls_count << " calls)";
+    s << ": " << std::fixed << std::setprecision(6) << secs/unit_ratio << unit_suffix;
+    return s.str();
+  }
+  
+  ptr every(size_t print_every) {
+    this->print_every = print_every;
+    return shared_from_this();
+  }
+  ptr ms() {
+    unit_ratio = 1./1000.;
+    unit_suffix = "ms";
+    return shared_from_this();
+  }
+  ptr us() {
+    unit_ratio = 1./1000000.;
+    unit_suffix = "us";
+    return shared_from_this();
+  }
+  ptr s() {
+    unit_ratio = 1;
+    unit_suffix = "s";
+    return shared_from_this();
   }
 private:
   const std::string name;
-  const int print_every;
-  BenchmarkCall benchmark_f;
+  size_t print_every;
+  PrintF print_function;
+  std::string unit_suffix;
+  double unit_ratio;
   std::chrono::steady_clock::time_point started;
 };
-#define CUR_POS std::string{__FUNCTION__} + " " + std::string{__FILE__} + " "
-#define benchmark_scope(name, ...) GuLinux::benchmark name{#name, GuLinux::benchmark::benchmark_stream(std::cerr ), __VA_ARGS__};
-#define benchmark_start(name, ...) auto name = new GuLinux::benchmark{#name, GuLinux::benchmark::benchmark_stream(std::cerr ), __VA_ARGS__};
-#define benchmark_end(name) delete name;
-
 }
+#define CUR_POS std::string{__FUNCTION__} + " " + std::string{__FILE__} + " "
+#define CREATE_BENCHMARK_BASE(name, out_function) \
+  auto name = make_shared<GuLinux::benchmark>(#name, out_function)
+  
+
+#define BENCH(name) CREATE_BENCHMARK_BASE(name, [](const std::string &s){ std::cerr << s << std::endl; })
+#define BENCH_END(name) name.reset();
 
 #endif
