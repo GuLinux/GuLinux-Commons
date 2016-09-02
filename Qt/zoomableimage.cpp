@@ -97,6 +97,7 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
       return;
     d->view->selectionRect = QRectF(sceneStart, sceneEnd);
   });
+  d->view->setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 }
 
 void ZoomableImage::fitToWindow()
@@ -161,7 +162,8 @@ void ZoomableImage::setImage(const QImage& image)
   if(image.isNull())
     return;
   d->imageSize = image.rect();
-  d->scene.addPixmap(QPixmap::fromImage(image));
+  auto item = d->scene.addPixmap(QPixmap::fromImage(image));
+  item->setTransformationMode(Qt::SmoothTransformation);
   if(d->view->selection)
     d->scene.addItem(d->view->selection);
   d->scene.setSceneRect(0, 0, image.size().width(), image.size().height());
