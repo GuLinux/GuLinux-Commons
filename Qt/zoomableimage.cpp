@@ -107,10 +107,14 @@ void ZoomableImage::fitToWindow()
 {
   d->view->zoomMode = Private::GraphicsView::FitToWindow;
   d->view->fitInView(d->imageSize, Qt::KeepAspectRatio);
-  qDebug() << d->view->transform();
+  emit zoomLevelChanged(zoomLevel());
 }
 
 
+double ZoomableImage::zoomLevel() const
+{
+  return d->view->transform().m11();
+}
 
 
 void ZoomableImage::normalSize()
@@ -217,6 +221,7 @@ void ZoomableImage::Private::set_zoom_level(double ratio, GraphicsView::ZoomMode
 {
   view->zoomMode = zoom_mode;
   view->setTransform({ratio, 0, 0, ratio, 0, 0});
+  emit q->zoomLevelChanged(q->zoomLevel());
 }
 
 void ZoomableImage::setTransformationMode(Qt::TransformationMode mode)

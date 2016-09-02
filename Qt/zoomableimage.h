@@ -42,6 +42,7 @@ public:
   enum Actions {ZoomIn, ZoomOut, ZoomFit, ZoomRealSize};
   QMap<Actions, QAction*> actions() const;
   void setTransformationMode(Qt::TransformationMode mode);
+  double zoomLevel() const;
 public slots:
   void setImage(const QImage &image);
   void scale(double factor);
@@ -54,6 +55,7 @@ protected:
     virtual void resizeEvent(QResizeEvent * e);
 signals:
   void selectedROI(const QRectF &);
+  void zoomLevelChanged(double);
 private:
   DPTR
 };
