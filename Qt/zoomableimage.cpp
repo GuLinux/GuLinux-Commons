@@ -42,7 +42,7 @@ public:
   class GraphicsView : public QGraphicsView {
   public:
     GraphicsView(ZoomableImage *q, QWidget *parent = nullptr);
-    enum {FreeZoom, RealSize, FitToWindow} zoomMode = RealSize;
+    enum ZoomMode {FreeZoom, RealSize, FitToWindow} zoomMode = RealSize;
     bool selectionMode = false;
     QRectF selectionRect;
     QGraphicsRectItem *selection = nullptr;
@@ -58,6 +58,9 @@ public:
   QRect imageSize;
   QToolBar* toolbar;
   QMap<Actions, QAction*> actions;
+  Qt::TransformationMode transformation_mode = Qt::SmoothTransformation;
+  double current_zoom() const;
+  void set_zoom_level(double ratio, GraphicsView::ZoomMode zoom_mode);
 };
 
 ZoomableImage::Private::GraphicsView::GraphicsView(ZoomableImage *q, QWidget* parent) : QGraphicsView(parent), q{q}
@@ -104,6 +107,7 @@ void ZoomableImage::fitToWindow()
 {
   d->view->zoomMode = Private::GraphicsView::FitToWindow;
   d->view->fitInView(d->imageSize, Qt::KeepAspectRatio);
+  qDebug() << d->view->transform();
 }
 
 
@@ -111,17 +115,21 @@ void ZoomableImage::fitToWindow()
 
 void ZoomableImage::normalSize()
 {
-  d->view->zoomMode = Private::GraphicsView::RealSize;
-  d->view->setTransform({});
+  d->set_zoom_level(1, Private::GraphicsView::RealSize);;
 }
 
 
 
 void ZoomableImage::scale(double factor)
 {
-  d->view->zoomMode = Private::Private::GraphicsView::FreeZoom;
-  d->view->scale(factor, factor);
+  d->set_zoom_level(factor * d->current_zoom(), Private::GraphicsView::FreeZoom);
 }
+
+void ZoomableImage::absoluteScale(double factor)
+{
+  d->set_zoom_level(factor, Private::GraphicsView::FreeZoom);
+}
+
 
 QToolBar* ZoomableImage::toolbar() const
 {
@@ -163,7 +171,7 @@ void ZoomableImage::setImage(const QImage& image)
     return;
   d->imageSize = image.rect();
   auto item = d->scene.addPixmap(QPixmap::fromImage(image));
-  item->setTransformationMode(Qt::SmoothTransformation);
+  item->setTransformationMode(d->transformation_mode);
   if(d->view->selection)
     d->scene.addItem(d->view->selection);
   d->scene.setSceneRect(0, 0, image.size().width(), image.size().height());
@@ -198,4 +206,20 @@ QGraphicsScene* ZoomableImage::scene() const
 QMap< ZoomableImage::Actions, QAction* > ZoomableImage::actions() const
 {
   return d->actions;
+}
+
+double ZoomableImage::Private::current_zoom() const
+{
+  return std::max(view->transform().m11(), view->transform().m21());
+}
+
+void ZoomableImage::Private::set_zoom_level(double ratio, GraphicsView::ZoomMode zoom_mode)
+{
+  view->zoomMode = zoom_mode;
+  view->setTransform({ratio, 0, 0, ratio, 0, 0});
+}
+
+void ZoomableImage::setTransformationMode(Qt::TransformationMode mode)
+{
+  d->transformation_mode = mode;
 }

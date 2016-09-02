@@ -41,9 +41,11 @@ public:
   QToolBar *toolbar() const;
   enum Actions {ZoomIn, ZoomOut, ZoomFit, ZoomRealSize};
   QMap<Actions, QAction*> actions() const;
+  void setTransformationMode(Qt::TransformationMode mode);
 public slots:
   void setImage(const QImage &image);
   void scale(double factor);
+  void absoluteScale(double factor);
   void fitToWindow();
   void normalSize();
   void startSelectionMode();
