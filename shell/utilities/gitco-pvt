@@ -24,6 +24,7 @@ fi
 
 if [ "$1" == "--ts-from-log" ]; then
   date --date "$( git log --pretty='%cd' -1 --date=iso)" "+%s" > "$LAST_COMMIT_TS_FILE"
+  echo "Next commit start date: $( date -d "@$( cat "$LAST_COMMIT_TS_FILE")" )"
   exit 0
 fi
 
