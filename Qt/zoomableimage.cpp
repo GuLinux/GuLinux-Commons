@@ -61,6 +61,7 @@ public:
   Qt::TransformationMode transformation_mode = Qt::SmoothTransformation;
   double current_zoom() const;
   void set_zoom_level(double ratio, GraphicsView::ZoomMode zoom_mode);
+  QGraphicsPixmapItem *imageItem = nullptr;
 };
 
 ZoomableImage::Private::GraphicsView::GraphicsView(ZoomableImage *q, QWidget* parent) : QGraphicsView(parent), q{q}
@@ -156,6 +157,7 @@ void ZoomableImage::Private::GraphicsView::mouseReleaseEvent(QMouseEvent* e)
   if(selectionMode) {
     selectionMode = false;
     selection = scene()->addRect(selectionRect, {Qt::green}, {QColor{0, 250, 250, 20}});
+    selection->setZValue(1);
     qDebug() << "rect: " << selectionRect << ", " << selection->rect();
     q->selectedROI(selection->rect());
   }
@@ -168,17 +170,18 @@ void ZoomableImage::Private::GraphicsView::mouseReleaseEvent(QMouseEvent* e)
 void ZoomableImage::setImage(const QImage& image)
 {
   d->toolbar->setEnabled(!image.isNull());
-  if(d->view->selection)
-    d->scene.removeItem(d->view->selection);
-  d->scene.clear();
-  if(image.isNull())
+  if(d->imageItem) {
+    d->scene.removeItem(d->imageItem);
+  }
+  if(image.isNull()) {
+    d->imageItem = nullptr;
     return;
+  }
   d->imageSize = image.rect();
-  auto item = d->scene.addPixmap(QPixmap::fromImage(image));
-  item->setTransformationMode(d->transformation_mode);
-  if(d->view->selection)
-    d->scene.addItem(d->view->selection);
+  d->imageItem = d->scene.addPixmap(QPixmap::fromImage(image));
+  d->imageItem->setTransformationMode(d->transformation_mode);
   d->scene.setSceneRect(0, 0, image.size().width(), image.size().height());
+  d->imageItem->setZValue(0);
 }
 
 QRect ZoomableImage::roi() const
