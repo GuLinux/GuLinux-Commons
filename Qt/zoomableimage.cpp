@@ -172,6 +172,7 @@ void ZoomableImage::setImage(const QImage& image)
   d->toolbar->setEnabled(!image.isNull());
   if(d->imageItem) {
     d->scene.removeItem(d->imageItem);
+    delete d->imageItem;
   }
   if(image.isNull()) {
     d->imageItem = nullptr;
