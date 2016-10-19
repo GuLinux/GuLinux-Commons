@@ -232,3 +232,9 @@ void ZoomableImage::setTransformationMode(Qt::TransformationMode mode)
 {
   d->transformation_mode = mode;
 }
+
+#ifdef HAVE_QT5_OPENGL
+void ZoomableImage::setOpenGL() {
+  d->view->setViewport(new QGLWidget);
+}
+#endif

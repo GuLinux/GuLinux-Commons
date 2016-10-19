@@ -24,6 +24,9 @@
 #include <QRect>
 #include <memory>
 #include "dptr.h"
+#ifdef HAVE_QT5_OPENGL
+#include <QtOpenGL/QGLWidget>
+#endif
 
 class QGraphicsScene;
 class QLabel;
@@ -43,6 +46,9 @@ public:
   QMap<Actions, QAction*> actions() const;
   void setTransformationMode(Qt::TransformationMode mode);
   double zoomLevel() const;
+#ifdef HAVE_QT5_OPENGL
+  void setOpenGL();
+#endif
 public slots:
   void setImage(const QImage &image);
   void scale(double factor);

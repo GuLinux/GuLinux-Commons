@@ -1,3 +1,6 @@
 include_directories(${Qt5Widgets_INCLUDE_DIRS})
 add_library(GuLinux_Qt_Commons STATIC zoomableimage.cpp functional.cpp qlambdaevent.cpp)
-add_subdirectory(tests)
+option(enable_gulinux_commons_qt_testing "Enable GuLinux-Commons qt module testing" Off)
+if(enable_gulinux_commons_qt_testing)
+  add_subdirectory(tests)
+endif(enable_gulinux_commons_qt_testing)
