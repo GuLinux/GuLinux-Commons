@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <execinfo.h>
-#include <cxxabi.h>
+#include "demangle.h"
 #include <mutex>
 using namespace std;
 using namespace GuLinux::Backtrace;
@@ -68,16 +68,8 @@ std::string Frame::function() const
     offset = function_mangled.substr(plus_index, function_mangled.size()-plus_index-1);
     function_mangled = function_mangled.substr(0, plus_index);
   }
-  int status;
-  char *demangled = abi::__cxa_demangle(function_mangled.c_str(), 0, 0, &status);
-  if(status == 0) {
-    string function_demangled{demangled};
-    auto full_function = function_demangled + offset;
-    free(demangled);
-    return full_function;
-  }
-  return function_mangled;
-  
+  Demangle demangled(function_mangled);
+  return demangled.ok() ? demangled.get() + offset : function_mangled + offset;
 }
 
 
