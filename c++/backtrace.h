@@ -16,6 +16,8 @@
  *
  */
 
+#ifndef WIN32
+
 #ifndef _STACKTRACE_H_
 #define _STACKTRACE_H_
 
@@ -41,3 +43,4 @@ std::ostream &operator<<(std::ostream &o, const GuLinux::Backtrace::Frame &frame
 std::ostream &operator<<(std::ostream &o, const GuLinux::Backtrace::Frame::vector &frames);
 
 #endif // _STACKTRACE_H_
+#endif // WIN32
