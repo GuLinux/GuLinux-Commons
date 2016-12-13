@@ -77,12 +77,28 @@ INDI_session_template() {
   fi  
   mkdir -p "$session_name"
   cp "$0" "$session_name/"
+  cat > "$session_name/settings" <<EOF
+DEFAULT_DEVICE="$device"
+SESSION_NAME="$session_name"
+FILTERS="L R G B"
+DARK=YES
+DARK_SEQUENCE=10
+EXPOSURES[L]="1:10 3:10 5:10"
+EXPOSURES[R]="5:5 10:5 15:5"
+EXPOSURES[G]="\${EXPOSURES[R]}"
+EXPOSURES[B]="\${EXPOSURES[R]}"
+EOF
+
   cat > "$session_name/start_sequence" <<EOF
 #!/bin/bash
-export DEFAULT_DEVICE="$device"
-export SESSION_NAME="$session_name"
-export sequence_size=10
 
+declare -A EXPOSURES
+FILTERS="L"
+EXPOSURES[L]="1"
+DARK=YES
+DARK_SEQUENCE=10
+
+. settings
 # Read a local copy of the indi_helper script
 . indi_helper
 
@@ -107,26 +123,27 @@ sequence_with_name() {
 
 INDI_set_local_upload_dir "\$PWD"
 
-# Just an example. Adjust according to your needs
-for exp in 10 20 40; do
-  sequence_with_name L \$sequence_size \$exp
-done
+# This will stop at each filter until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
 
-# This will stop until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
-confirmation
 
-for filter in R G B; do
-  for exp in 40 80 160; do
+for filter in \${FILTERS}; do
+  INDI_log "************** Starting sequences for \$filter filter"
+  confirmation
+  for exp_seq in \${EXPOSURES[\$filter]}; do
+    exp="\${exp_seq%%:*}"
+    sequence_size="\${exp_seq##*:}"
     sequence_with_name \$filter \$sequence_size \$exp
   done
+done
+
+if [[ "\$DARK" == "YES" ]]; then
+  INDI_log "Starting dark frames sequence"
   confirmation
-done
-
-# Dark auto detection. For each different exposure, a dark file will be shot with this line
-echo "\$dark_exposures" | tr ' ' '\n' | grep -Eve '$^' | sort -nu | while read exp; do
-  sequence_with_name Dark \$sequence_size \$exp
-done
-
+  # Dark auto detection. For each different exposure, a dark file will be shot with this line
+  echo "\$dark_exposures" | tr ' ' '\n' | grep -Eve '$^' | sort -nu | while read exp; do
+    sequence_with_name DARK \$DARK_SEQUENCE \$exp
+  done
+fi
 EOF
 chmod a+x "$session_name/start_sequence"
 }
