@@ -56,17 +56,19 @@ INDI_session_template() {
     exit 1
   fi  
   mkdir -p "$session_name"
+  cp "$0" "$session_name/"
   cat > "$session_name/start_sequence" <<EOF
 #!/bin/bash
 export DEFAULT_DEVICE="$device"
 export SESSION_NAME="$session_name"
 
-# Remember to copy indi_helper here for it to work, or to change the path
+# Read a local copy of the indi_helper script
 . indi_helper
+
 update_file_prefix() {
   image_type="\$1"
   exposure="\$2"
-  INDI_set_file_prefix "\${SESSION_NAME}_\${image_type}_\${exposure}_XXX"
+  INDI_set_file_prefix "\${SESSION_NAME}_\${image_type}_\${exposure}secs_XXX"
 }
 
 INDI_set_local_upload_dir "\$PWD"
@@ -86,3 +88,8 @@ done
 EOF
 chmod a+x "$session_name/start_sequence"
 }
+
+if [[ "$( basename "$0" )" == "indi_helper" ]] && [[ "$1" == "create-script" ]]; then
+    shift
+    INDI_session_template "$@"
+fi
