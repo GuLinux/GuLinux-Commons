@@ -110,6 +110,26 @@ confirmation() {
   done
 }
 
+global_prepare() {
+  true
+}
+
+# To override: \$1=filter(sequence) name
+sequence_prepare() {
+  confirmation
+}
+
+
+# To override: \$1=filter(sequence) name, \$2=sequence length (shots), \$3: exposure
+sequence_starting() {
+  true
+}
+
+if [[ -r customizations ]]; then
+  . customizations
+fi
+
+
 dark_exposures=""
 sequence_with_name() {
   local image_type="\$1"
@@ -123,25 +143,28 @@ sequence_with_name() {
 
 INDI_set_local_upload_dir "\$PWD"
 
-# This will stop at each filter until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
+global_prepare
 
+# This will stop at each filter until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
 
 for filter in \${FILTERS}; do
   INDI_log "************** Starting sequences for \$filter filter"
-  confirmation
+  sequence_prepare "\$filter"
   for exp_seq in \${EXPOSURES[\$filter]}; do
     exp="\${exp_seq%%:*}"
     sequence_size="\${exp_seq##*:}"
+    sequence_starting "\$filter" "\$sequence_size" "\$exp"
     sequence_with_name \$filter \$sequence_size \$exp
   done
 done
 
 if [[ "\$DARK" == "YES" ]]; then
   INDI_log "Starting dark frames sequence"
-  confirmation
+  sequence_prepare "DARK"
   # Dark auto detection. For each different exposure, a dark file will be shot with this line
   echo "\$dark_exposures" | tr ' ' '\n' | grep -Eve '$^' | sort -nu | while read exp; do
-    sequence_with_name DARK \$DARK_SEQUENCE \$exp
+    sequence_starting DARK "\$DARK_SEQUENCE" "\$exp"
+    sequence_with_name DARK "\$DARK_SEQUENCE" "\$exp"
   done
 fi
 EOF
