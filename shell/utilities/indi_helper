@@ -204,6 +204,7 @@ sequence_group() {
     local exp="${exp_seq%%:*}"
     local sequence_size="${exp_seq##*:}"
     sequence_starting "$filter" "$sequence_size" "$exp"
+    INDI_set_local_upload_dir "$PWD"
     sequence_with_name $filter $sequence_size $exp
   done
   INDI_log "**** Sequence group $name finished"
@@ -211,7 +212,7 @@ sequence_group() {
 
 INDI_connect
 
-INDI_set_local_upload_dir "$PWD"
+
 
 INDI_log "============================================="
 INDI_log "** Starting session $SESSION_NAME"
