@@ -13,12 +13,16 @@ INDI_parse_cli() {
   done
 }
 
+INDI_log() {
+  echo "$( date +%FT%T ) - $@" >&2
+}
+
 INDI_set_property_sync() {
-  DEV="$1"
-  PROPERTY="$2"
-  KEY="$3"
-  VALUE="$4"
-  TIMEOUT="${5:-2}" 
+  local DEV="$1"
+  local PROPERTY="$2"
+  local KEY="$3"
+  local VALUE="$4"
+  local TIMEOUT="${5:-2}" 
   if [[ -z "$TIMEOUT" ]]; then
     echo "Usage: set_property_sync DEVICE PROPERTY KEY VALUE TIMEOUT"
     exit 1
@@ -29,23 +33,39 @@ INDI_set_property_sync() {
 
 INDI_set_local_upload_dir() {
   INDI_parse_cli "$@"  
-  DIR="$1"
+  local DIR="$1"
   INDI_set_property_sync "$DEV" UPLOAD_MODE UPLOAD_LOCAL On 
   INDI_set_property_sync "$DEV" UPLOAD_SETTINGS UPLOAD_DIR "$DIR"
 }
 
 INDI_set_file_prefix() {
   INDI_parse_cli "$@"  
-  PREFIX="$1"
+  local PREFIX="$1"
   INDI_set_property_sync "$DEV" UPLOAD_SETTINGS UPLOAD_PREFIX "$PREFIX"
+}
+
+INDI_compose_file_prefix() {
+  local name="$1"
+  local image_type="$2"
+  local exposure="$3"
+  printf -v file_prefix "%s_%s_%07.3fsecs_XXX" "$name" "$image_type" "$exposure"
+  INDI_set_file_prefix "$file_prefix"
 }
 
 INDI_expose() {
   INDI_parse_cli "$@"  
-  EXPTIME="$1"
-  INDI_set_property_sync "$DEV" CCD_EXPOSURE CCD_EXPOSURE_VALUE "$EXPTIME"
+  local EXPTIME="$1"
+  INDI_set_property_sync "$DEV" CCD_EXPOSURE CCD_EXPOSURE_VALUE "$EXPTIME" "$( perl -e "print $EXPTIME + 10")"
 }
 
+INDI_expose_sequence() {
+  local shots="$1"
+  local exposure="$2"
+  for i in $( seq 1 $shots ); do
+    INDI_log "sequence: exposure $i of $shots ($exposure seconds)"
+    INDI_expose "$exposure"
+  done
+}
 
 INDI_session_template() {
   first_device="$( indi_getprop | grep CCD_EXPOSURE | cut -d. -f1 | head -n 1 )"
@@ -61,30 +81,52 @@ INDI_session_template() {
 #!/bin/bash
 export DEFAULT_DEVICE="$device"
 export SESSION_NAME="$session_name"
+export sequence_size=10
 
 # Read a local copy of the indi_helper script
 . indi_helper
 
-update_file_prefix() {
-  image_type="\$1"
-  exposure="\$2"
-  INDI_set_file_prefix "\${SESSION_NAME}_\${image_type}_\${exposure}secs_XXX"
+confirmation() {
+  echo "Enter 'y' to continue."
+  local conf_var=""
+  while [[ "\$conf_var" != y ]]; do
+    read -n 1 -s conf_var
+  done
+}
+
+dark_exposures=""
+sequence_with_name() {
+  local image_type="\$1"
+  local shots="\$2"
+  local exposure="\$3"
+  INDI_log "Starting sequence '\$image_type', \$shots shots, \$exposure seconds"
+  INDI_compose_file_prefix "\$SESSION_NAME" "\$image_type" "\$exposure"
+  INDI_expose_sequence "\$shots" "\$exposure"
+  dark_exposures="\$dark_exposures \$exposure"
 }
 
 INDI_set_local_upload_dir "\$PWD"
 
-# Loop for each image type
-for img_type in Luminance Red Green Blue Dark; do
-  # loop for each exposure
-  for exp in 5 15 60; do
-    # Set local directory for image saving
-    update_file_prefix "\$img_type" "\$exp"
-    for i in {1..20}; do
-      # Start exposure
-      INDI_expose "\$exp"
-    done
-  done
+# Just an example. Adjust according to your needs
+for exp in 10 20 40; do
+  sequence_with_name L \$sequence_size \$exp
 done
+
+# This will stop until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
+confirmation
+
+for filter in R G B; do
+  for exp in 40 80 160; do
+    sequence_with_name \$filter \$sequence_size \$exp
+  done
+  confirmation
+done
+
+# Dark auto detection. For each different exposure, a dark file will be shot with this line
+echo "\$dark_exposures" | tr ' ' '\n' | grep -Eve '$^' | sort -nu | while read exp; do
+  sequence_with_name Dark \$sequence_size \$exp
+done
+
 EOF
 chmod a+x "$session_name/start_sequence"
 }
