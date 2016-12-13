@@ -45,11 +45,12 @@ INDI_set_file_prefix() {
 }
 
 INDI_compose_file_prefix() {
+  INDI_parse_cli "$@"
   local name="$1"
   local image_type="$2"
   local exposure="$3"
   printf -v file_prefix "%s_%s_%07.3fsecs_XXX" "$name" "$image_type" "$exposure"
-  INDI_set_file_prefix "$file_prefix"
+  INDI_set_file_prefix "$file_prefix" -d "$DEV"
 }
 
 INDI_expose() {
@@ -59,13 +60,25 @@ INDI_expose() {
 }
 
 INDI_expose_sequence() {
+  INDI_parse_cli "$@"
   local shots="$1"
   local exposure="$2"
   for i in $( seq 1 $shots ); do
     INDI_log "sequence: exposure $i of $shots ($exposure seconds)"
-    INDI_expose "$exposure"
+    INDI_expose "$exposure" -d "$DEV"
   done
 }
+
+INDI_connect() {
+  INDI_parse_cli "$@"
+  INDI_set_property_sync "$DEV" CONNECTION CONNECT On
+}
+
+INDI_disconnect() {
+  INDI_parse_cli "$@"
+  INDI_set_property_sync "$DEV" CONNECTION DISCONNECT On
+}
+
 
 INDI_session_template() {
   first_device="$( indi_getprop | grep CCD_EXPOSURE | cut -d. -f1 | head -n 1 )"
@@ -89,7 +102,7 @@ EXPOSURES[G]="\${EXPOSURES[R]}"
 EXPOSURES[B]="\${EXPOSURES[R]}"
 EOF
 
-cat >"$session_name/customizations.sample" <<EOF
+cat >"$session_name/customizations.sample" <<'EOF'
 # This file contains an example to customize all the steps preparation functions
 
 # This will be executed as the first step, to initialize everything
@@ -98,21 +111,21 @@ global_prepare() {
 }
 
 # This will be executed at the begin of each sequence group (darks, filter change, etc)
-# To override: \$1=filter(sequence) name
+# To override: $1=filter(sequence) name
 sequence_prepare() {
   confirmation
 }
 
 
 # This will be executed at the begin of each sequence
-# To override: \$1=filter(sequence) name, \$2=sequence length (shots), \$3: exposure
+# To override: $1=filter(sequence) name, $2=sequence length (shots), $3: exposure
 sequence_starting() {
   true
 }
 
 EOF
 
-  cat > "$session_name/start_sequence" <<EOF
+  cat > "$session_name/start_sequence" <<'EOF'
 #!/bin/bash
 
 declare -A EXPOSURES
@@ -128,24 +141,24 @@ DARK_SEQUENCE=10
 confirmation() {
   echo "Enter 'y' to continue."
   local conf_var=""
-  while [[ "\$conf_var" != y ]]; do
+  while [[ "$conf_var" != y ]]; do
     read -n 1 -s conf_var
   done
 }
 
 sum_exposures() {
   local sum="0"
-  for i in \$@; do
-    sum="\$( perl -e "print \$sum + \${i%%:*}*\${i##*:}" )"
+  for i in $@; do
+    sum="$( perl -e "print $sum + ${i%%:*}*${i##*:}" )"
     shift
   done
-  echo "\$sum"
+  echo "$sum"
 }
 
 date_inc() {
-  local secs="\$1"; shift
-  local new_date="\$( perl -e "use POSIX; print ceil(\$( date +%s ) + \$secs)" )"
-  date -d @\$new_date "\$@"
+  local secs="$1"; shift
+  local new_date="$( perl -e "use POSIX; print ceil($( date +%s ) + $secs)" )"
+  date -d @$new_date "$@"
 }
 
 global_prepare() { true; }
@@ -160,58 +173,61 @@ fi
 dark_exposures=""
 
 add_dark_exposure() {
-  exposure="\$( perl -e "print \$1" ):\$DARK_SEQUENCE"
-  if ! grep -q "\$exposure" <<<"\$dark_exposures"; then
-    dark_exposures="\$dark_exposures\$( [[ -z "\$dark_exposures" ]] || echo " ")\$exposure:\$DARK_SEQUENCE"
+  exposure="$( perl -e "print $1" ):$DARK_SEQUENCE"
+  if ! grep -q "$exposure" <<<"$dark_exposures"; then
+    dark_exposures="$dark_exposures$( [[ -z "$dark_exposures" ]] || echo " ")$exposure:$DARK_SEQUENCE"
   fi
 }
 
 sequence_with_name() {
-  local image_type="\$1"
-  local shots="\$2"
-  local exposure="\$3"
-  INDI_log "Starting sequence '\$image_type', \$shots shots, \$exposure seconds"
-  INDI_compose_file_prefix "\$SESSION_NAME" "\$image_type" "\$exposure"
-  INDI_expose_sequence "\$shots" "\$exposure"
-  add_dark_exposure "\$exposure"
+  local image_type="$1"
+  local shots="$2"
+  local exposure="$3"
+  INDI_log "Starting sequence '$image_type', $shots shots, $exposure seconds"
+  INDI_compose_file_prefix "$SESSION_NAME" "$image_type" "$exposure"
+  INDI_expose_sequence "$shots" "$exposure"
+  add_dark_exposure "$exposure"
 }
 
 sequence_group() {
-  local name="\$1"
-  local exposures="\$2"
-  local total_exposure="\$( sum_exposures "\$exposures" )"
+  local name="$1"
+  local exposures="$2"
+  local total_exposure="$( sum_exposures "$exposures" )"
 
-  INDI_log "*** Starting sequences group \$name: exposures=\$exposures, total exposure: \${total_exposure}s"
+  INDI_log "*** Starting sequences group $name: exposures=$exposures, total exposure: ${total_exposure}s"
 
-  sequence_prepare "\$name"
+  sequence_prepare "$name"
 
-  local finish_date="\$( date_inc "\$total_exposure" +%FT%T )"
-  INDI_log "**** Sequence group \$name started; will finish at \$finish_date"
-  for exp_seq in \$exposures; do
-    local exp="\${exp_seq%%:*}"
-    local sequence_size="\${exp_seq##*:}"
-    sequence_starting "\$filter" "\$sequence_size" "\$exp"
-    sequence_with_name \$filter \$sequence_size \$exp
+  local finish_date="$( date_inc "$total_exposure" +%FT%T )"
+  INDI_log "**** Sequence group $name started; will finish at $finish_date"
+  for exp_seq in $exposures; do
+    local exp="${exp_seq%%:*}"
+    local sequence_size="${exp_seq##*:}"
+    sequence_starting "$filter" "$sequence_size" "$exp"
+    INDI_set_local_upload_dir "$PWD"
+    sequence_with_name $filter $sequence_size $exp
   done
-  INDI_log "**** Sequence group \$name finished"
+  INDI_log "**** Sequence group $name finished"
 }
 
-INDI_set_local_upload_dir "\$PWD"
+INDI_connect
+
+
 
 INDI_log "============================================="
-INDI_log "** Starting session \$SESSION_NAME"
+INDI_log "** Starting session $SESSION_NAME"
 
 global_prepare
 
-for filter in \${FILTERS}; do
-  sequence_group "\$filter" "\${EXPOSURES[\$filter]}"
+for filter in ${FILTERS}; do
+  sequence_group "$filter" "${EXPOSURES[$filter]}"
 done
 
 if [[ "\$DARK" == "AFTER_ALL" ]]; then
-  sequence_group "DARK" "\$dark_exposures"
+  sequence_group "DARK" "$dark_exposures"
 fi
 
-INDI_log "** Finished session \$SESSION_NAME"
+INDI_log "** Finished session $SESSION_NAME"
 EOF
 chmod a+x "$session_name/start_sequence"
 }
