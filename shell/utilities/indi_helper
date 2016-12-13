@@ -149,6 +149,14 @@ fi
 
 
 dark_exposures=""
+
+add_dark_exposure() {
+  exposure="\$( perl -e "print \$1" ):\$DARK_SEQUENCE"
+  if ! grep -q "\$exposure" <<<"\$dark_exposures"; then
+    dark_exposures="\$dark_exposures\$( [[ -z "\$dark_exposures" ]] || echo " ")\$exposure:\$DARK_SEQUENCE"
+  fi
+}
+
 sequence_with_name() {
   local image_type="\$1"
   local shots="\$2"
@@ -156,17 +164,19 @@ sequence_with_name() {
   INDI_log "Starting sequence '\$image_type', \$shots shots, \$exposure seconds"
   INDI_compose_file_prefix "\$SESSION_NAME" "\$image_type" "\$exposure"
   INDI_expose_sequence "\$shots" "\$exposure"
-  dark_exposures="\$dark_exposures\$( [[ -z "\$dark_exposures" ]] || echo " ")\$exposure:\$DARK_SEQUENCE"
+  add_dark_exposure "\$exposure"
 }
 
 sequence_group() {
   local name="\$1"
   local exposures="\$2"
+  local total_exposure="\$( sum_exposures "\$exposures" )"
 
-  INDI_log "*** Starting sequences group \$name: exposures=\$exposures"
+  INDI_log "*** Starting sequences group \$name: exposures=\$exposures, total exposure: \${total_exposure}s"
+
   sequence_prepare "\$name"
 
-  local finish_date="\$( date_inc "\$( sum_exposures "\$exposures" )" +%FT%T )"
+  local finish_date="\$( date_inc "\$total_exposure" +%FT%T )"
   INDI_log "**** Sequence group \$name started; will finish at \$finish_date"
   for exp_seq in \$exposures; do
     local exp="\${exp_seq%%:*}"
@@ -181,14 +191,12 @@ INDI_set_local_upload_dir "\$PWD"
 
 global_prepare
 
-# This will stop at each filter until you press 'y' on your keyboard. You can replace this with a command to rotate the filter wheel, instead
-
 for filter in \${FILTERS}; do
   sequence_group "\$filter" "\${EXPOSURES[\$filter]}"
 done
 
 if [[ "\$DARK" == "YES" ]]; then
-  sequence_group "DARK" "\$DARK_SEQUENCE"
+  sequence_group "DARK" "\$dark_exposures"
 fi
 EOF
 chmod a+x "$session_name/start_sequence"
