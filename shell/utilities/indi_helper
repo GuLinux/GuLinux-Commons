@@ -46,3 +46,43 @@ INDI_expose() {
   INDI_set_property_sync "$DEV" CCD_EXPOSURE CCD_EXPOSURE_VALUE "$EXPTIME"
 }
 
+
+INDI_session_template() {
+  first_device="$( indi_getprop | grep CCD_EXPOSURE | cut -d. -f1 | head -n 1 )"
+  device="${first_device:-set default device name here}"
+  session_name="$1"
+  if [[ -z "$session_name" ]]; then
+    echo "Usage: INDI_session_template session_name"
+    exit 1
+  fi  
+  mkdir -p "$session_name"
+  cat > "$session_name/start_sequence" <<EOF
+#!/bin/bash
+export DEFAULT_DEVICE="$device"
+export SESSION_NAME="$session_name"
+
+# Remember to copy indi_helper here for it to work, or to change the path
+. indi_helper
+update_file_prefix() {
+  image_type="\$1"
+  exposure="\$2"
+  INDI_set_file_prefix "\${SESSION_NAME}_\${image_type}_\${exposure}_XXX"
+}
+
+INDI_set_local_upload_dir "\$PWD"
+
+# Loop for each image type
+for img_type in Luminance Red Green Blue Dark; do
+  # loop for each exposure
+  for exp in 5 15 60; do
+    # Set local directory for image saving
+    update_file_prefix "\$img_type" "\$exp"
+    for i in {1..20}; do
+      # Start exposure
+      INDI_expose "\$exp"
+    done
+  done
+done
+EOF
+chmod a+x "$session_name/start_sequence"
+}
