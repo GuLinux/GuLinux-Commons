@@ -45,11 +45,12 @@ INDI_set_file_prefix() {
 }
 
 INDI_compose_file_prefix() {
+  INDI_parse_cli "$@"
   local name="$1"
   local image_type="$2"
   local exposure="$3"
   printf -v file_prefix "%s_%s_%07.3fsecs_XXX" "$name" "$image_type" "$exposure"
-  INDI_set_file_prefix "$file_prefix"
+  INDI_set_file_prefix "$file_prefix" -d "$DEV"
 }
 
 INDI_expose() {
@@ -59,13 +60,25 @@ INDI_expose() {
 }
 
 INDI_expose_sequence() {
+  INDI_parse_cli "$@"
   local shots="$1"
   local exposure="$2"
   for i in $( seq 1 $shots ); do
     INDI_log "sequence: exposure $i of $shots ($exposure seconds)"
-    INDI_expose "$exposure"
+    INDI_expose "$exposure" -d "$DEV"
   done
 }
+
+INDI_connect() {
+  INDI_parse_cli "$@"
+  INDI_set_property_sync "$DEV" CONNECTION CONNECT On
+}
+
+INDI_disconnect() {
+  INDI_parse_cli "$@"
+  INDI_set_property_sync "$DEV" CONNECTION DISCONNECT On
+}
+
 
 INDI_session_template() {
   first_device="$( indi_getprop | grep CCD_EXPOSURE | cut -d. -f1 | head -n 1 )"
@@ -195,6 +208,8 @@ sequence_group() {
   done
   INDI_log "**** Sequence group $name finished"
 }
+
+INDI_connect
 
 INDI_set_local_upload_dir "$PWD"
 
