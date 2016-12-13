@@ -81,7 +81,7 @@ INDI_session_template() {
 DEFAULT_DEVICE="$device"
 SESSION_NAME="$session_name"
 FILTERS="L R G B"
-DARK=YES
+DARK=AFTER_ALL
 DARK_SEQUENCE=10
 EXPOSURES[L]="1:10 3:10 5:10"
 EXPOSURES[R]="5:5 10:5 15:5"
@@ -118,7 +118,7 @@ EOF
 declare -A EXPOSURES
 FILTERS="L"
 EXPOSURES[L]="1"
-DARK=YES
+DARK=AFTER_ALL
 DARK_SEQUENCE=10
 
 . settings
@@ -207,7 +207,7 @@ for filter in \${FILTERS}; do
   sequence_group "\$filter" "\${EXPOSURES[\$filter]}"
 done
 
-if [[ "\$DARK" == "YES" ]]; then
+if [[ "\$DARK" == "AFTER_ALL" ]]; then
   sequence_group "DARK" "\$dark_exposures"
 fi
 
