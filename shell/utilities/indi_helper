@@ -1,0 +1,48 @@
+#!/bin/bash
+
+
+INDI_parse_cli() {
+  DEV="$DEFAULT_DEVICE"
+  while [[ -n "$1" ]]; do
+    case "$1" in
+      -d|--device)
+        DEV="$2"; shift
+        ;;
+    esac
+    shift
+  done
+}
+
+INDI_set_property_sync() {
+  DEV="$1"
+  PROPERTY="$2"
+  KEY="$3"
+  VALUE="$4"
+  TIMEOUT="${5:-2}" 
+  if [[ -z "$TIMEOUT" ]]; then
+    echo "Usage: set_property_sync DEVICE PROPERTY KEY VALUE TIMEOUT"
+    exit 1
+  fi
+  indi_setprop "$DEV.$PROPERTY.$KEY"="$VALUE"
+  indi_eval -w -t $TIMEOUT "\"$DEV.$PROPERTY._STATE\"==1"
+}
+
+INDI_set_local_upload_dir() {
+  INDI_parse_cli "$@"  
+  DIR="$1"
+  INDI_set_property_sync "$DEV" UPLOAD_MODE UPLOAD_LOCAL On 
+  INDI_set_property_sync "$DEV" UPLOAD_SETTINGS UPLOAD_DIR "$DIR"
+}
+
+INDI_set_file_prefix() {
+  INDI_parse_cli "$@"  
+  PREFIX="$1"
+  INDI_set_property_sync "$DEV" UPLOAD_SETTINGS UPLOAD_PREFIX "$PREFIX"
+}
+
+INDI_expose() {
+  INDI_parse_cli "$@"  
+  EXPTIME="$1"
+  INDI_set_property_sync "$DEV" CCD_EXPOSURE CCD_EXPOSURE_VALUE "$EXPTIME"
+}
+
