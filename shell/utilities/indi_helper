@@ -14,7 +14,7 @@ INDI_parse_cli() {
 }
 
 INDI_log() {
-  echo "$( date +%FT%T ) - $@" >&2
+  echo "$( date +%FT%T ) - $@" | tee -a indi.log >&2
 }
 
 INDI_set_property_sync() {
@@ -189,6 +189,9 @@ sequence_group() {
 
 INDI_set_local_upload_dir "\$PWD"
 
+INDI_log "============================================="
+INDI_log "** Starting session \$SESSION_NAME"
+
 global_prepare
 
 for filter in \${FILTERS}; do
@@ -198,6 +201,8 @@ done
 if [[ "\$DARK" == "YES" ]]; then
   sequence_group "DARK" "\$dark_exposures"
 fi
+
+INDI_log "** Finished session \$SESSION_NAME"
 EOF
 chmod a+x "$session_name/start_sequence"
 }
