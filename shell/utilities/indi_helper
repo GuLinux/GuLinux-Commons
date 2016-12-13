@@ -89,6 +89,29 @@ EXPOSURES[G]="\${EXPOSURES[R]}"
 EXPOSURES[B]="\${EXPOSURES[R]}"
 EOF
 
+cat >"$session_name/customizations.sample" <<EOF
+# This file contains an example to customize all the steps preparation functions
+
+# This will be executed as the first step, to initialize everything
+global_prepare() {
+  true
+}
+
+# This will be executed at the begin of each sequence group (darks, filter change, etc)
+# To override: \$1=filter(sequence) name
+sequence_prepare() {
+  confirmation
+}
+
+
+# This will be executed at the begin of each sequence
+# To override: \$1=filter(sequence) name, \$2=sequence length (shots), \$3: exposure
+sequence_starting() {
+  true
+}
+
+EOF
+
   cat > "$session_name/start_sequence" <<EOF
 #!/bin/bash
 
@@ -125,23 +148,9 @@ date_inc() {
   date -d @\$new_date "\$@"
 }
 
-# This will be executed as the first step, to initialize everything
-global_prepare() {
-  true
-}
-
-# This will be executed at the begin of each sequence group (darks, filter change, etc)
-# To override: \$1=filter(sequence) name
-sequence_prepare() {
-  confirmation
-}
-
-
-# This will be executed at the begin of each sequence
-# To override: \$1=filter(sequence) name, \$2=sequence length (shots), \$3: exposure
-sequence_starting() {
-  true
-}
+global_prepare() { true; }
+sequence_prepare() { confirmation; }
+sequence_starting() { true; }
 
 if [[ -r customizations ]]; then
   . customizations
