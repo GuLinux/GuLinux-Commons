@@ -123,6 +123,13 @@ sequence_starting() {
   true
 }
 
+# This will be executed after each sequence finishes
+# To override: $1=filter(sequence) name, $2=sequence length (shots), $3: exposure
+sequence_finished() {
+  true
+}
+
+
 EOF
 
   cat > "$session_name/start_sequence" <<'EOF'
@@ -164,6 +171,7 @@ date_inc() {
 global_prepare() { true; }
 sequence_prepare() { confirmation; }
 sequence_starting() { true; }
+sequence_finished() { true; }
 
 if [[ -r customizations ]]; then
   . customizations
@@ -206,6 +214,7 @@ sequence_group() {
     sequence_starting "$filter" "$sequence_size" "$exp"
     INDI_set_local_upload_dir "$PWD"
     sequence_with_name $filter $sequence_size $exp
+    sequence_finished "$filter" "$sequence_size" "$exp"
   done
   INDI_log "**** Sequence group $name finished"
 }
