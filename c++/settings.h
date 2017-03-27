@@ -19,6 +19,7 @@
 #include <memory>
 #include <boost/optional.hpp>
 #include <list>
+#include <string>
 
 namespace GuLinux {
   namespace Settings {
