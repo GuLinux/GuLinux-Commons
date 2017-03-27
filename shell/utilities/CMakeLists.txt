@@ -13,4 +13,5 @@ ssh_view_screenshot
 tomp4
 watchpage
 qj
+indi_helper
 DESTINATION bin)

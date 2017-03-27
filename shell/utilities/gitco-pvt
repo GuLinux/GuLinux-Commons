@@ -12,6 +12,7 @@ help() {
   echo "Usage: $0 [--reset-ts] commit message"
   echo "       $0 --set-ts start-date"
   echo "       $0 --ts-from-log (sets timestamp from log message"
+  echo "       $0 --change-commit-date <commit-id>"
 }
 
 
@@ -48,8 +49,27 @@ if ! [ -r "$LAST_COMMIT_TS_FILE" ]; then
 	echo "$YESTERDAY" > "$LAST_COMMIT_TS_FILE"
 fi
 
+
+
 NEW_COMMIT_TS="$(( $( randMax 2000 ) + $( cat "$LAST_COMMIT_TS_FILE" ) ))"
 echo "New commit date: $( date -d "@$NEW_COMMIT_TS" )"
+
+
+
+if [ "$1" == "--change-commit-date" ]; then
+  commit_id="$2"
+  [[ -z "$commit_id" ]] && help && exit 1
+  git filter-branch  --force --commit-filter "
+    if [ \"\$GIT_COMMIT\" = \"${commit_id}\" ]; then
+      export GIT_AUTHOR_DATE=\"${NEW_COMMIT_TS}\";
+      export GIT_COMMITTER_DATE=\"${NEW_COMMIT_TS}\";
+    fi
+    git commit-tree \"\$@\";
+    " HEAD
+  exit 0
+fi
+
+
 
 GIT_AUTHOR_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_AUTHOR_DATE
 GIT_COMMITTER_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_COMMITTER_DATE

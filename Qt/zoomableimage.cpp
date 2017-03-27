@@ -89,7 +89,6 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
   d->actions = {{ZoomIn, zoomInAction}, {ZoomOut, zoomOutAction}, {ZoomFit, zoomBestFitAction}, {ZoomRealSize, zoomOriginalAction}};
   connect(zoomInAction, &QAction::triggered, bind(&ZoomableImage::scale, this, 1.2));
   connect(zoomOutAction, &QAction::triggered, bind(&ZoomableImage::scale, this, 0.8));
-  d->toolbar->addSeparator();
   connect(zoomBestFitAction, &QAction::triggered, bind(&ZoomableImage::fitToWindow, this));
   connect(zoomOriginalAction, &QAction::triggered, bind(&ZoomableImage::normalSize, this));
   d->toolbar->setEnabled(false);
@@ -232,3 +231,9 @@ void ZoomableImage::setTransformationMode(Qt::TransformationMode mode)
 {
   d->transformation_mode = mode;
 }
+
+#ifdef HAVE_QT5_OPENGL
+void ZoomableImage::setOpenGL() {
+  d->view->setViewport(new QGLWidget);
+}
+#endif
