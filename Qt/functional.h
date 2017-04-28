@@ -22,6 +22,9 @@
 #include <QTimer>
 #define F_PTR(class, name, ...) static_cast<void (class::*)(__VA_ARGS__)>(&class::name)
 #include <QThread>
+#include <QFuture>
+#include <QFutureWatcher>
+#include <QtConcurrent/QtConcurrent>
 #include <functional>
 #include <memory>
 namespace GuLinux {
@@ -30,6 +33,22 @@ inline void timedLambda(int msec, std::function<void()> f, QObject *context) {
   timer->setSingleShot(true);
   QObject::connect(timer, &QTimer::timeout, context, [=] {f(); delete timer; });
   timer->start(msec);
+}
+
+template<typename R> inline void qAsync(std::function<R()> f, std::function<void(const QFuture<R> &)> onFuture, QObject *context) {
+  QFutureWatcher<R> *futureWatcher = new QFutureWatcher<R>(context);
+  QObject::connect(futureWatcher, &QFutureWatcher<R>::finished, context, [futureWatcher, onFuture] { onFuture(futureWatcher->future()); });
+  QObject::connect(futureWatcher, &QFutureWatcher<R>::finished, context, [futureWatcher] { delete futureWatcher; });
+  futureWatcher->setFuture(QtConcurrent::run(f));
+}
+
+inline void qAsync(std::function<void()> f, std::function<void()> onFinished, QObject *context) {
+  qAsync<void>(f, [onFinished](const QFuture<void> &) { onFinished(); }, context);
+}
+
+
+template<typename R> inline void qAsyncR(std::function<R()> f, std::function<void(const R &r)> onFinished, QObject *context) {
+  qAsync<R>(f, [onFinished](const QFuture<R> &future) { onFinished(future.result()); }, context);
 }
 
 class Thread : public QThread {
