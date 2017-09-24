@@ -23,7 +23,7 @@
 #include <QWidget>
 #include <QRect>
 #include <memory>
-#include "dptr.h"
+#include "c++/dptr.h"
 #ifdef HAVE_QT5_OPENGL
 #include <QtOpenGL/QGLWidget>
 #endif

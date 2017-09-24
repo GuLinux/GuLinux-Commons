@@ -22,7 +22,7 @@
 
 #include <functional>
 #include <QEvent>
-#include "dptr.h"
+#include "c++/dptr.h"
 
 class QLambdaEvent : public QEvent
 {
