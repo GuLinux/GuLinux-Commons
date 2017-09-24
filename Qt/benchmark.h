@@ -19,7 +19,7 @@
 #define GULINUX_COMMONS_QT_BENCHMARK_H
 
 #include "c++/stlutils.h"
-#include "qt_strings.h"
+#include "qt_strings_helper.h"
 
 
 #define QBENCH(name) CREATE_BENCHMARK_BASE(name, [](const std::string &s){ qDebug() << s; })
