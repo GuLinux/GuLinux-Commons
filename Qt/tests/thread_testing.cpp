@@ -17,7 +17,7 @@
  *
  */
 
-#include "Qt/functional.h"
+#include "Qt/qt_functional.h"
 #include <QtTest/QTest>
 
 class ThreadTesting : public QObject {
