@@ -34,6 +34,7 @@
 #include <QToolBar>
 #include <QIcon>
 #include <QAction>
+#include <functional>
 
 using namespace std;
 
