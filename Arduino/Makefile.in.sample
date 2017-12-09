@@ -1,0 +1,26 @@
+BUILD_DIR := $(PWD)/.build/target
+CACHE_DIR := $(PWD)/.build/cache
+
+all: build upload usb
+
+build_dir:
+	mkdir -p $(BUILD_DIR) $(CACHE_DIR)
+
+
+GuLinux-Commons-Libs: GuLinux-Commons/Arduino/GuLinux-Arduino-Utils/*
+
+build: build_dir *.cpp *.h *.ino GuLinux-Commons-Libs
+	$(ARDUINO_BUILDER) -compile -logger=human $(HARDWARE_FLAGS) $(TOOLS_FLAGS) $(LIBRARIES_FLAGS) -libraries GuLinux-Commons/Arduino -fqbn=$(BOARD_FQBN) -vid-pid=$(BOARD_VID_PID) -ide-version=10805 -build-path $(BUILD_DIR) -warnings=default -build-cache $(CACHE_DIR) -prefs=build.warn_data_percentage=75 *.ino
+
+upload: build upload_maple
+
+upload_maple: build
+	$(ARDUINO_HOME)/hardware/Arduino_STM32/tools/$(STM32_OS_DIR)/maple_upload $(USB_PORT) 1 1EAF:0003 $(BUILD_DIR)/*.ino.bin 
+
+clean:
+	rm -rf $(BUILD_DIR) $(CACHE_DIR)
+
+usb:
+	picocom -c /dev/$(USB_PORT) --omap crcrlf 
+
+# vim: noexpandtab:
