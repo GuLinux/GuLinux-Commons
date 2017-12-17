@@ -1,4 +1,5 @@
 #!/bin/bash
+DATE_COMMAND=${DATE_COMMAND:-date}
 
 randMax() {
   n=$RANDOM
@@ -13,6 +14,7 @@ help() {
   echo "       $0 --set-ts start-date"
   echo "       $0 --ts-from-log (sets timestamp from log message"
   echo "       $0 --change-commit-date <commit-id>"
+  echo "Environment: DATE_COMMAND can override the command used for date calculation (on OSX you want to set it to gdate)"
 }
 
 
@@ -24,8 +26,8 @@ fi
 
 
 if [ "$1" == "--ts-from-log" ]; then
-  date --date "$( git log --pretty='%cd' -1 --date=iso)" "+%s" > "$LAST_COMMIT_TS_FILE"
-  echo "Next commit start date: $( date -d "@$( cat "$LAST_COMMIT_TS_FILE")" )"
+  ${DATE_COMMAND} --date "$( git log --pretty='%cd' -1 --date=iso)" "+%s" > "$LAST_COMMIT_TS_FILE"
+  echo "Next commit start date: $( ${DATE_COMMAND} -d "@$( cat "$LAST_COMMIT_TS_FILE")" )"
   exit 0
 fi
 
@@ -39,20 +41,20 @@ if test "$1" == "--set-ts"; then
     help
     exit 1
   fi
-  echo "$( date --date "$2" "+%s" )" > "$LAST_COMMIT_TS_FILE"
+  echo "$( ${DATE_COMMAND} --date "$2" "+%s" )" > "$LAST_COMMIT_TS_FILE"
   exit 0
 fi
 
 if ! [ -r "$LAST_COMMIT_TS_FILE" ]; then
-        YESTERDAY="$( date +"%Y-%m-%d" --date "@$(( $(date +%s)-86400 ))" )"
-        YESTERDAY="$( date +%s --date="@$(( $(date +%s --date "${YESTERDAY}T18:30:00") + $( randMax 1200) ))")"
+        YESTERDAY="$( ${DATE_COMMAND} +"%Y-%m-%d" --date "@$(( $(${DATE_COMMAND} +%s)-86400 ))" )"
+        YESTERDAY="$( ${DATE_COMMAND} +%s --date="@$(( $(${DATE_COMMAND} +%s --date "${YESTERDAY}T18:30:00") + $( randMax 1200) ))")"
 	echo "$YESTERDAY" > "$LAST_COMMIT_TS_FILE"
 fi
 
 
 
 NEW_COMMIT_TS="$(( $( randMax 2000 ) + $( cat "$LAST_COMMIT_TS_FILE" ) ))"
-echo "New commit date: $( date -d "@$NEW_COMMIT_TS" )"
+echo "New commit date: $( ${DATE_COMMAND} -d "@$NEW_COMMIT_TS" )"
 
 
 
@@ -71,8 +73,8 @@ fi
 
 
 
-GIT_AUTHOR_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_AUTHOR_DATE
-GIT_COMMITTER_DATE="$( date -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_COMMITTER_DATE
+GIT_AUTHOR_DATE="$( ${DATE_COMMAND} -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_AUTHOR_DATE
+GIT_COMMITTER_DATE="$( ${DATE_COMMAND} -Iseconds -d "@$NEW_COMMIT_TS")"; export GIT_COMMITTER_DATE
 
 git commit "$@" || exit 1
 echo "$NEW_COMMIT_TS" > "$LAST_COMMIT_TS_FILE"
