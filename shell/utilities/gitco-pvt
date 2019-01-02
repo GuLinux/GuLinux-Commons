@@ -10,18 +10,33 @@ randMax() {
 }
 
 help() {
-  echo "Usage: $0 [--reset-ts] commit message"
-  echo "       $0 --set-ts start-date"
-  echo "       $0 --ts-from-log (sets timestamp from log message"
-  echo "       $0 --change-commit-date <commit-id>"
-  echo "Environment: DATE_COMMAND can override the command used for date calculation (on OSX you want to set it to gdate)"
+  cat <<EOF
+$0: git commit using a configured date/time.
+
+Usage: $0 --reset-ts # Removes any previously configured timestamp file
+       $0 --set-ts start-date # ISO format: YYYY-mm-ddTHH:MM:SS
+       $0 --ts-from-log # Automatically sets the next commit timestamp based on the last commit timestamp
+       $0 <git commit parameters> # invokes git commit with the specified parameter, and the next commit date changed according to current settings
+       $0 --change-commit-date <commit-id> # Rewrites history redating a particular commit id - dangerous command, avoid if possible
+Environment: DATE_COMMAND can override the command used for date calculation (on OSX you want to set it to gdate)
+
+When used for the first time, the next commit timestamp is automatically set to the previous day, sometime around 18:30 pm.
+If a start time is provided via the --ts-from-log or --set-ts commands, this will be used instead.
+
+Typical usage:
+$0 --reset-ts # Reset the commit starting date to yesterday - do this only for the first time
+$0 commit -am "My commit message"
+
+# do some other work
+$0 commit -am "another commit message"
+EOF
+    exit "${1:-0}"
 }
 
 
 LAST_COMMIT_TS_FILE="/tmp/$( basename $0).ts"
 if test "$1" == "" || test "$1" == "--help"; then
   help
-  exit 0
 fi
 
 
@@ -33,13 +48,13 @@ fi
 
 if test "$1" == "--reset-ts"; then
   rm "$LAST_COMMIT_TS_FILE"
-  shift
+  echo "Temporary file removed, will default to yesterday after 18:30 for next commit."
+  exit 0
 fi
 
 if test "$1" == "--set-ts"; then
   if test "$2" == ""; then
-    help
-    exit 1
+    help 1
   fi
   echo "$( ${DATE_COMMAND} --date "$2" "+%s" )" > "$LAST_COMMIT_TS_FILE"
   exit 0
@@ -60,7 +75,7 @@ echo "New commit date: $( ${DATE_COMMAND} -d "@$NEW_COMMIT_TS" )"
 
 if [ "$1" == "--change-commit-date" ]; then
   commit_id="$2"
-  [[ -z "$commit_id" ]] && help && exit 1
+  [[ -z "$commit_id" ]] && help 1
   git filter-branch  --force --commit-filter "
     if [ \"\$GIT_COMMIT\" = \"${commit_id}\" ]; then
       export GIT_AUTHOR_DATE=\"${NEW_COMMIT_TS}\";
