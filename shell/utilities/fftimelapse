@@ -1,0 +1,66 @@
+#!/bin/bash
+# codec options: -s hd1080 -vcodec libx264
+
+INPUT_FRAMERATE=1
+OUTPUT_FILENAME="timelapse.mp4"
+INPUT_MASK="IMG_%04d.JPG"
+START_NUMBER=1
+
+
+print_help() {
+    cat >&2 <<EOF
+Usage: $0 [options].
+Options:
+  -o|--output <filename> (default: $OUTPUT_FILENAME)
+  -m|--input-mask <input-mask> (default: $INPUT_MASK)
+  -s|--start-number <number> (default: $START_NUMBER)
+  -f|--output-framerate <framerate> (default: $OUTPUT_FRAMERATE)
+  -r|--input-framerate <framerate> (default: $INPUT_FRAMERATE)
+  -z|--resize <width> <height>
+  -g|--glob       use glob as mask
+  -crf <crf>
+  -preset <preset>
+EOF
+    exit ${1:-1}
+}
+
+[ -z "$1" ] && print_help
+
+while [[ -n "$1" ]]; do
+    case "$1" in
+        -s|--start-number)
+            START_NUMBER="$2"; shift
+            ;;
+        -m|--input-mask)
+            INPUT_MASK="$2"; shift
+            ;;
+        -f|--output-framerate)
+            OUTPUT_FRAMERATE_OPTS="-r $2"; shift
+            ;;
+        -o|--output)
+            OUTPUT_FILENAME="$2"; shift
+            ;;
+        -r|--input-framerate)
+            INPUT_FRAMERATE="$2"; shift
+            ;;
+        -z|--resize)
+            RESIZE_OPTS="-vf \"scale=$2:$3:force_original_aspect_ratio=decrease,pad=$2:$3:(ow-iw)/2:(oh-ih)/2\""; shift; shift
+            ;;
+        -crf)
+            CRF_OPTS="-crf $2"; shift
+            ;;
+        -preset)
+            PRESET_OPTS="-preset $2"; shift
+            ;;
+        -g|--glob)
+            GLOB_OPTS="-pattern_type glob"
+            ;;
+        *)
+            print_help
+            ;;
+    esac
+    shift
+done
+set -x
+eval "ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $RESIZE_OPTS $PRESET_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
+
