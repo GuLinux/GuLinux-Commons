@@ -73,5 +73,5 @@ while [[ -n "$1" ]]; do
     shift
 done
 set -x
-eval "ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $RESIZE_OPTS $PRESET_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
+eval "ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $RESIZE_OPTS $PRESET_OPTS $CRF_OPTS -vf format=yuv420p '$OUTPUT_FILENAME'"
 
