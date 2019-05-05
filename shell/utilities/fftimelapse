@@ -16,7 +16,7 @@ Options:
   -s|--start-number <number> (default: $START_NUMBER)
   -f|--output-framerate <framerate> (default: $OUTPUT_FRAMERATE)
   -r|--input-framerate <framerate> (default: $INPUT_FRAMERATE)
-  -z|--resize <width> <height>
+  -z|--resize <resolution> (resolution can be either WIDTHxHEIGHT, or 4k/1080p/720p)
   -g|--glob       use glob as mask
   -crf <crf>
   -preset <preset>
@@ -44,7 +44,18 @@ while [[ -n "$1" ]]; do
             INPUT_FRAMERATE="$2"; shift
             ;;
         -z|--resize)
-            RESIZE_OPTS="-vf \"scale=$2:$3:force_original_aspect_ratio=decrease,pad=$2:$3:(ow-iw)/2:(oh-ih)/2\""; shift; shift
+            if [ "$2" == "4k" ]; then
+                res="3840x2160"
+            elif [ "$2" == "1080p" ]; then
+                res="1920x1080"
+            elif [ "$2" == "720p" ]; then
+                res="1280x720"
+            else
+                res="$2"
+            fi
+            width="$( cut -dx -f1 <<<"$res")"
+            height="$( cut -dx -f2 <<<"$res")"
+            RESIZE_OPTS="-vf \"scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2\""; shift
             ;;
         -crf)
             CRF_OPTS="-crf $2"; shift
