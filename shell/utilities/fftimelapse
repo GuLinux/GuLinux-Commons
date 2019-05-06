@@ -17,6 +17,7 @@ Options:
   -f|--output-framerate <framerate> (default: $OUTPUT_FRAMERATE)
   -r|--input-framerate <framerate> (default: $INPUT_FRAMERATE)
   -z|--resize <resolution> (resolution can be either WIDTHxHEIGHT, or 4k/1080p/720p)
+  -cf <color_format> use specific color format (default: yuvj444p, another common choice is yuv420p)
   -g|--glob       use glob as mask
   -crf <crf>
   -preset <preset>
@@ -25,6 +26,16 @@ EOF
 }
 
 [ -z "$1" ] && print_help
+
+VF=""
+
+add_vf() {
+    if [ -n "$VF" ]; then
+        VF="$VF, $@"
+    else
+        VF="$@"
+    fi
+}
 
 while [[ -n "$1" ]]; do
     case "$1" in
@@ -53,9 +64,13 @@ while [[ -n "$1" ]]; do
             else
                 res="$2"
             fi
+            shift
             width="$( cut -dx -f1 <<<"$res")"
             height="$( cut -dx -f2 <<<"$res")"
-            RESIZE_OPTS="-vf \"scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2\""; shift
+            add_vf "scale=$width:$height:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2"
+            ;;
+        -cf)
+            add_vf "format=$2"; shift
             ;;
         -crf)
             CRF_OPTS="-crf $2"; shift
@@ -72,6 +87,12 @@ while [[ -n "$1" ]]; do
     esac
     shift
 done
-set -x
-eval "ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $RESIZE_OPTS $PRESET_OPTS $CRF_OPTS -vf format=yuv420p '$OUTPUT_FILENAME'"
+
+[ -n "$VF" ] && VF_ARG="-vf \"$VF\""
+
+command="ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
+echo "Running FFMPEG command:"
+echo "$command"
+eval "$command"
+
 
