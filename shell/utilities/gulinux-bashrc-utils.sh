@@ -1,6 +1,16 @@
 BASHRC_FILE="${BASHRC_FILE:-$HOME/.bashrc}"
 alias rebashrc="source $BASHRC_FILE"
-alias vimbashrc="vim ${BASHRC_FILE}; source ${BASHRC_FILE}"
+
+function vimbashrc() {
+    vim "${BASHRC_FILE}"
+    rebashrc
+}
+
+function vimbashrc-gulinux() {
+    vim "${BASH_SOURCE}"
+    rebashrc
+}
+
 export EDITOR=vim
 export VISUAL=vim
 mkcd() {
@@ -70,4 +80,13 @@ function parse_git_dirty {
 export PS1="\[\e[33m\]\u\[\e[m\]@\[\e[94m\]\h\[\e[m\] \[\e[32m\]\w\[\e[m\] \[\e[31m\]\`parse_git_branch\`\[\e[m\] \\$ "
 # end custom bash prompt
 
-
+function tmux-session() {
+    if [ "$1" == "--help" ]; then
+        echo "Usage: tmux-session [SESSION_DIR] [SESSION_NAME]"
+        exit 1
+    fi
+    SESSION_DIR="${1:-$PWD}"
+    SESSION_DIR="$( cd "$SESSION_DIR"; pwd )"
+    SESSION_NAME="${2:-$( basename "${SESSION_DIR}" )}"
+    tmux new-session -As "$SESSION_NAME" -c "$SESSION_DIR"
+}
