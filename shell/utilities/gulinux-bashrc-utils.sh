@@ -22,10 +22,16 @@ mkdatedir() {
     DATESPEC="%Y-%m-%d"
     if [ "$1" == '-t' ]; then
         DATESPEC="${DATESPEC}T%H-%M-%S"
+        shift
     elif [ "$1" == '-u' ]; then
         DATESPEC="%s"
+        shift
     fi
-    mkdir -p "$( ${DATE_COMMAND:-date} +${DATESPEC} )"
+    dirname="$( ${DATE_COMMAND:-date} +${DATESPEC} )"
+    mkdir -p "$dirname"
+    if [ "$1" == "cd" ]; then
+        cd "$dirname"
+    fi
 }
 
 # Custom bash prompt
