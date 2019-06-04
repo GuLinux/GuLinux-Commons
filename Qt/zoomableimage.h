@@ -37,10 +37,19 @@ class ZoomableImage : public QWidget
 {
 Q_OBJECT
 public:
+
+    enum class SelectionMode { None, Rect, Point };
+
    ~ZoomableImage();
    ZoomableImage(bool embed_toolbar = true, QWidget* parent = 0);
-   QRect roi() const;
+
+   /// When adding items to the scene, account for the current image zoom level (e.g. by using 'getImgTransform()')
    QGraphicsScene *scene() const;
+
+   /// Returns the current transform used for displaying the image
+   /** Meant to be applied to points & rects obtained from 'selectedRect' and 'selectedPoint' signals. */
+   const QTransform &getImgTransform() const;
+
   QToolBar *toolbar() const;
   enum Actions {ZoomIn, ZoomOut, ZoomFit, ZoomRealSize};
   QMap<Actions, QAction*> actions() const;
@@ -49,19 +58,24 @@ public:
 #ifdef HAVE_QT5_OPENGL
   void setOpenGL();
 #endif
+
 public slots:
   void setImage(const QImage &image);
+
+  /// Changes the current image scale by 'factor'
   void scale(double factor);
+
   void absoluteScale(double factor);
   void fitToWindow();
   void normalSize();
-  void startSelectionMode();
-  void clearROI();
+  void startSelectionMode(SelectionMode mode);
+
 protected:
     virtual void resizeEvent(QResizeEvent * e);
 signals:
-  void selectedROI(const QRectF &);
+  void selectedRect(const QRectF &); ///< Passes a rectangle in image space
   void zoomLevelChanged(double);
+  void selectedPoint(const QPointF &); ///< Passes a point in image space
 private:
   DPTR
 };

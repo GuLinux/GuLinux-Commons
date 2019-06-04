@@ -44,11 +44,14 @@ public:
   public:
     GraphicsView(ZoomableImage *q, QWidget *parent = nullptr);
     enum ZoomMode {FreeZoom, RealSize, FitToWindow} zoomMode = RealSize;
-    bool selectionMode = false;
+    SelectionMode selectionMode = SelectionMode::None;
+
+    /// Selection rectangle in image space
     QRectF selectionRect;
-    QGraphicsRectItem *selection = nullptr;
+
   protected:
     virtual void mouseReleaseEvent(QMouseEvent*e);
+
   private:
     ZoomableImage *q;
   };
@@ -56,14 +59,25 @@ public:
   GraphicsView *view;
   ZoomableImage *q;
   QGraphicsScene scene;
-  QRect imageSize;
   QToolBar* toolbar;
   QMap<Actions, QAction*> actions;
   Qt::TransformationMode transformation_mode = Qt::SmoothTransformation;
   double current_zoom() const;
   void set_zoom_level(double ratio, GraphicsView::ZoomMode zoom_mode);
   QGraphicsPixmapItem *imageItem = nullptr;
+  QTransform imgTransform;
+
+    /// Updates scene rectangle to reflect the current image zoom level
+    void updateSceneRect();
 };
+
+
+void ZoomableImage::Private::updateSceneRect()
+{
+    const auto imgDisplaySize = imgTransform.mapRect(imageItem->boundingRect()).size();
+    scene.setSceneRect(0, 0, imgDisplaySize.width(), imgDisplaySize.height());
+}
+
 
 ZoomableImage::Private::GraphicsView::GraphicsView(ZoomableImage *q, QWidget* parent) : QGraphicsView(parent), q{q}
 {
@@ -97,9 +111,11 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
   d->view->setScene(&d->scene);
   d->view->setDragMode(QGraphicsView::ScrollHandDrag);
   connect(d->view, &QGraphicsView::rubberBandChanged, [=](QRect a,const QPointF &sceneStart, const QPointF &sceneEnd){
-    if(!d->view->selectionMode || a.isEmpty())
+    if(d->view->selectionMode != SelectionMode::Rect || a.isEmpty())
       return;
-    d->view->selectionRect = QRectF(sceneStart, sceneEnd);
+    const QTransform imgInvT = d->imgTransform.inverted();
+    d->view->selectionRect = QRectF(imgInvT.map(sceneStart),
+                                    imgInvT.map(sceneEnd));
   });
   d->view->setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 }
@@ -107,14 +123,29 @@ ZoomableImage::ZoomableImage(bool embed_toolbar, QWidget* parent) : QWidget(pare
 void ZoomableImage::fitToWindow()
 {
   d->view->zoomMode = Private::GraphicsView::FitToWindow;
-  d->view->fitInView(d->imageSize, Qt::KeepAspectRatio);
+
+  auto viewRect = d->view->rect();
+
+  // Adjustment as performed in QGraphicsView::fitInView(), to make sure it really fits
+  constexpr int MARGIN = 2;
+  viewRect.adjust(MARGIN, MARGIN, -MARGIN, -MARGIN);
+
+  const double scaleFitWidth = (double)viewRect.width() / d->imageItem->boundingRect().width();
+  const double scaleFitHeight = (double)viewRect.height() / d->imageItem->boundingRect().height();
+  const double scale = std::min(scaleFitWidth, scaleFitHeight);
+
+  d->imgTransform = QTransform{ scale, 0, 0, scale, 0, 0 };
+  d->imageItem->setTransform(d->imgTransform);
+
+  d->updateSceneRect();
+
   emit zoomLevelChanged(zoomLevel());
 }
 
 
 double ZoomableImage::zoomLevel() const
 {
-  return d->view->transform().m11();
+    return d->current_zoom();
 }
 
 
@@ -142,30 +173,43 @@ QToolBar* ZoomableImage::toolbar() const
 }
 
 
-
-
-
-void ZoomableImage::startSelectionMode()
+void ZoomableImage::startSelectionMode(SelectionMode mode)
 {
-  clearROI();
-  d->view->selectionMode = true;
-  d->view->setDragMode(QGraphicsView::RubberBandDrag);
+    d->view->selectionMode = mode;
+    switch (mode)
+    {
+    case SelectionMode::Rect:
+        d->view->setDragMode(QGraphicsView::RubberBandDrag);
+        break;
+
+    case SelectionMode::Point:
+        d->view->setCursor(QCursor{Qt::CrossCursor});
+        d->view->setDragMode(QGraphicsView::NoDrag);
+        break;
+    }
 }
 
 void ZoomableImage::Private::GraphicsView::mouseReleaseEvent(QMouseEvent* e)
 {
-  if(selectionMode) {
-    selectionMode = false;
-    selection = scene()->addRect(selectionRect, {Qt::green}, {QColor{0, 250, 250, 20}});
-    selection->setZValue(1);
-    qDebug() << "rect: " << selectionRect << ", " << selection->rect();
-    q->selectedROI(selection->rect());
-  }
-  QGraphicsView::mouseReleaseEvent(e);
-  setDragMode(QGraphicsView::ScrollHandDrag);
+    switch (selectionMode)
+    {
+    case SelectionMode::Rect:
+        selectionMode = SelectionMode::None;
+        qDebug() << "rect: " << selectionRect;
+        q->selectedRect(selectionRect);
+        break;
+
+    case SelectionMode::Point:
+        selectionMode = SelectionMode::None;
+        const QPointF imgPoint = q->d->imgTransform.inverted().map(mapToScene(e->pos()));
+        qDebug() << "point: " << imgPoint;
+        q->selectedPoint(imgPoint);
+        break;
+    }
+
+    QGraphicsView::mouseReleaseEvent(e);
+    setDragMode(QGraphicsView::ScrollHandDrag);
 }
-
-
 
 void ZoomableImage::setImage(const QImage& image)
 {
@@ -178,24 +222,12 @@ void ZoomableImage::setImage(const QImage& image)
     d->imageItem = nullptr;
     return;
   }
-  d->imageSize = image.rect();
+
   d->imageItem = d->scene.addPixmap(QPixmap::fromImage(image));
   d->imageItem->setTransformationMode(d->transformation_mode);
-  d->scene.setSceneRect(0, 0, image.size().width(), image.size().height());
+  d->imageItem->setTransform(d->imgTransform);
+  d->updateSceneRect();
   d->imageItem->setZValue(0);
-}
-
-QRect ZoomableImage::roi() const
-{
-  return d->view->selectionRect.toRect();
-}
-
-void ZoomableImage::clearROI()
-{
-  d->scene.removeItem(d->view->selection);
-  delete d->view->selection;
-  d->view->selection = 0;
-  d->view->selectionRect = {};
 }
 
 void ZoomableImage::resizeEvent(QResizeEvent* e)
@@ -211,6 +243,12 @@ QGraphicsScene* ZoomableImage::scene() const
 }
 
 
+const QTransform &ZoomableImage::getImgTransform() const
+{
+    return d->imgTransform;
+}
+
+
 QMap< ZoomableImage::Actions, QAction* > ZoomableImage::actions() const
 {
   return d->actions;
@@ -218,13 +256,19 @@ QMap< ZoomableImage::Actions, QAction* > ZoomableImage::actions() const
 
 double ZoomableImage::Private::current_zoom() const
 {
-  return std::max(view->transform().m11(), view->transform().m21());
+  return std::max(imgTransform.m11(), imgTransform.m21());
 }
 
 void ZoomableImage::Private::set_zoom_level(double ratio, GraphicsView::ZoomMode zoom_mode)
 {
   view->zoomMode = zoom_mode;
-  view->setTransform({ratio, 0, 0, ratio, 0, 0});
+  imgTransform = QTransform{ ratio, 0, 0, ratio, 0, 0 };
+  if (imageItem)
+  {
+      imageItem->setTransform(imgTransform);
+      updateSceneRect();
+  }
+
   emit q->zoomLevelChanged(q->zoomLevel());
 }
 
