@@ -30,7 +30,7 @@ template<typename T> using UniqueDPTR = std::unique_ptr<T>;
 // Doesn't aim to be a fully featured unique_ptr, but just a very basic ptr wrapper with automatic deletion for dptr.
 template<typename T> class UniqueDPTR {
 public:
-    UniqueDPTR(T *t) : ptr(t) {}
+    explicit UniqueDPTR(T *t) : ptr(t) {}
     ~UniqueDPTR() { delete ptr; }
     T *get() const { return ptr; }
     T &operator*() const { return *get(); }

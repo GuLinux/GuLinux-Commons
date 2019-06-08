@@ -33,7 +33,7 @@
 namespace GuLinux {
 class Scope {
 public:
-  Scope(const std::function<void()> &onExit) : onExit(onExit) {}
+  explicit Scope(const std::function<void()> &onExit) : onExit(onExit) {}
   ~Scope() { onExit(); }
 private:
   std::function<void()> onExit;
@@ -67,13 +67,14 @@ public:
       timers[name].clear();
     }
   }
+
   std::string elapsed_str(std::size_t calls_count, double secs) const {
-    std::stringstream s;
-    s << "benchmark " << name;
+    std::stringstream _s;
+    _s << "benchmark " << name;
     if(print_every > 1)
-      s << " (avg of " << calls_count << " calls)";
-    s << ": " << std::fixed << std::setprecision(6) << secs/unit_ratio << unit_suffix;
-    return s.str();
+      _s << " (avg of " << calls_count << " calls)";
+    _s << ": " << std::fixed << std::setprecision(6) << secs/unit_ratio << unit_suffix;
+    return _s.str();
   }
   
   ptr every(size_t print_every) {

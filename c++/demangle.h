@@ -25,7 +25,7 @@ namespace GuLinux {
 class Demangle
 {
 public:
-  Demangle(const std::string &mangled);
+  explicit Demangle(const std::string &mangled);
   ~Demangle();
   operator std::string() const;
   std::string get() const;
