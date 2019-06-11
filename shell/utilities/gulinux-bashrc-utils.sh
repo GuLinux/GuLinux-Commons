@@ -98,3 +98,18 @@ function tmux-session() {
     SESSION_NAME="${2:-$( basename "${SESSION_DIR}" )}"
     tmux new-session -As "$SESSION_NAME" -c "$SESSION_DIR"
 }
+
+
+function dotenv-source() {
+    DIR="$PWD"
+    while [ "$DIR" != "/" ]; do
+        echo '[=] Searching for `.env` in ' "$DIR" >&2
+        if [ -r "$DIR/.env" ]; then
+            . "$DIR/.env"
+            echo "[+] Found $DIR/.env" >&2
+            break
+        else
+            DIR="$( dirname "$DIR" )"
+        fi
+    done
+}
