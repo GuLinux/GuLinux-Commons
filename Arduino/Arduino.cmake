@@ -43,6 +43,7 @@ add_custom_target(
         -tools ${ARDUINO_HOME}/tools-builder
         -tools ${HOME}/.arduino15/packages
         -libraries ${HOME}/Arduino/libraries
+        -libraries ${CMAKE_SOURCE_DIR}/libraries
         -fqbn=${DEVICE_FQBN}
         -ide-version=10808
         -build-path ${BUILD_DIR}
