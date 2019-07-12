@@ -16,7 +16,7 @@ endif()
 if(${BOARD} STREQUAL "bluepill")
     set(UPLOAD_METHOD DFUUploadMethod CACHE STRING "Options available: DFUUploadMethod, BMPMethod")
     set(DEVICE_FQBN Arduino_STM32:STM32F1:genericSTM32F103C:device_variant=STM32F103CB,upload_method=${UPLOAD_METHOD},cpu_speed=speed_72mhz,opt=osstd)
-    set(TTY ttyACM0 CACHE STRING "Default tty port for picocom (ttyACM0)")
+    set(TTY /dev/serial/by-id/usb-LeafLabs_Maple-if00 CACHE STRING "Default tty port for picocom (ttyACM0)")
     set(BOARD_EXTRA_OPTS -vid-pid=0X1EAF_0X0004)
 elseif(${BOARD} STREQUAL "nano")
     set(TTY ttyUSB0 CACHE STRING "Default tty port for picocom (ttyUSB0)")
@@ -60,7 +60,7 @@ add_custom_target(
 )
 
 add_custom_target(upload_maple
-	${HOME}/Arduino/hardware/Arduino_STM32/tools/linux/maple_upload ${TTY} 2 1EAF:0003 ${BUILD_DIR}/${PROJECT_NAME}.ino.bin
+    ${HOME}/Arduino/hardware/Arduino_STM32/tools/linux/maple_upload ${TTY} 2 1EAF:0003 ${BUILD_DIR}/${PROJECT_NAME}.ino.bin
     DEPENDS ${PROJECT_NAME}
 )
 
@@ -69,3 +69,11 @@ add_custom_target(upload_arduino
     DEPENDS ${PROJECT_NAME}
 )
 add_custom_target(tty picocom /dev/${TTY} --baud ${TTY_BAUD} --echo USES_TERMINAL)
+add_custom_target(bmp_gdb
+    gdb
+    -ex "target extended-remote /dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe__STLINK____Firmware_v1.6.1-269-g7cb1858__C1DEA6F9-if00"
+    -ex "monitor swdp_scan"
+    -ex "attach 1"
+    -ex "file ${BUILD_DIR}/${PROJECT_NAME}.ino.elf"
+    USES_TERMINAL
+)
