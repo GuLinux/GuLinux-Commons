@@ -3,6 +3,7 @@ set(BUILD_DIR ${CMAKE_BINARY_DIR}/output)
 
 file(MAKE_DIRECTORY ${CACHE_DIR})
 set(HOME $ENV{HOME})
+set(GDB_EXECUTABLE gdb-multiarch CACHE STRING "GDB Executable for embedded architecture (default: gdb-multiarch)")
 
 
 set(BOARD "${DEFAULT_BOARD}" CACHE STRING "Board type (currently supported: `nano`, `bluepill, mapleMini`)")
@@ -70,7 +71,7 @@ add_custom_target(upload_arduino
 )
 add_custom_target(tty picocom /dev/${TTY} --baud ${TTY_BAUD} --echo USES_TERMINAL)
 add_custom_target(bmp_gdb
-    gdb
+    ${GDB_EXECUTABLE}
     -ex "target extended-remote /dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe__STLINK____Firmware_v1.6.1-269-g7cb1858__C1DEA6F9-if00"
     -ex "monitor swdp_scan"
     -ex "attach 1"
