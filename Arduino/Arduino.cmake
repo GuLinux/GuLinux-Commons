@@ -13,25 +13,27 @@ if("${ARDUINO_HOME}" STREQUAL "")
     message(FATAL_ERROR "Please set the ARDUINO_HOME environment variable")
 endif()
 
-
+set(DEFAULT_LEAFLAB_TTY /dev/serial/by-id/usb-LeafLabs_Maple-if00)
 if(${BOARD} STREQUAL "bluepill")
     set(UPLOAD_METHOD DFUUploadMethod CACHE STRING "Options available: DFUUploadMethod, BMPMethod")
     set(DEVICE_FQBN Arduino_STM32:STM32F1:genericSTM32F103C:device_variant=STM32F103CB,upload_method=${UPLOAD_METHOD},cpu_speed=speed_72mhz,opt=osstd)
-    set(TTY /dev/serial/by-id/usb-LeafLabs_Maple-if00 CACHE STRING "Default tty port for picocom (ttyACM0)")
+    set(TTY DEFAULT_LEAFLAB_TTY CACHE STRING "Default tty port for picocom (${DEFAULT_LEAFLAB_TTY})")
     set(BOARD_EXTRA_OPTS -vid-pid=0X1EAF_0X0004)
 elseif(${BOARD} STREQUAL "nano")
-    set(TTY ttyUSB0 CACHE STRING "Default tty port for picocom (ttyUSB0)")
+    set(TTY /dev/ttyUSB0 CACHE STRING "Default tty port for picocom (ttyUSB0)")
     set(DEVICE_CPU atmega328p)
     set(DEVICE_FQBN arduino:avr:nano:cpu=atmega328)
     set(ARDUINO_UPLOAD_BAUD 57600)
 elseif(${BOARD} STREQUAL "mapleMini")
     set(DEVICE_FQBN Arduino_STM32:STM32F1:mapleMini:bootloader_version=original,cpu_speed=speed_72mhz,opt=osstd)
-    set(TTY ttyACM0 CACHE STRING "Default tty port for picocom (ttyACM0)")
+    set(TTY ${DEFAULT_LEAFLAB_TTY} CACHE STRING "Default tty port for picocom (${DEFAULT_LEAFLAB_TTY})")
 else()
     message(FATAL_ERROR "Board ${BOARD} not supported. Please set one of the supported boards using the -DBOARD=`board-name` parameter")
 endif()
 
 set(TTY_BAUD 9600 CACHE STRING "Baud rate for picocom (9600)")
+set(TTY_IMAP lfcrlf CACHE STRING "picocom tty imap (default: lfcrlf)")
+set(TTY_OMAP crcrlf CACHE STRING "picocom tty omap (default: crcrlf)")
 
 add_custom_target(
     ${PROJECT_NAME}
@@ -69,7 +71,7 @@ add_custom_target(upload_arduino
     /bin/avrdude -C/etc/avrdude.conf -v -p${DEVICE_CPU} -carduino -P/dev/${TTY} -b${ARDUINO_UPLOAD_BAUD} -D -Uflash:w:${BUILD_DIR}/${PROJECT_NAME}.ino.hex:i
     DEPENDS ${PROJECT_NAME}
 )
-add_custom_target(tty picocom /dev/${TTY} --baud ${TTY_BAUD} --echo USES_TERMINAL)
+add_custom_target(tty picocom ${TTY} --baud ${TTY_BAUD} --imap ${TTY_IMAP} --omap ${TTY_OMAP} --echo USES_TERMINAL)
 add_custom_target(bmp_gdb
     ${GDB_EXECUTABLE}
     -ex "target extended-remote /dev/serial/by-id/usb-Black_Sphere_Technologies_Black_Magic_Probe__STLINK____Firmware_v1.6.1-269-g7cb1858__C1DEA6F9-if00"
