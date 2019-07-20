@@ -16,6 +16,8 @@ release_tag = 'v' + release_name
 release_body = os.environ['TRAVIS_COMMIT_MESSAGE']
 commit_id = os.environ['TRAVIS_COMMIT']
 
+print('release_tag={}, commit_id={}'.format(release_tag, commit_id))
+
 pr = None
 
 pr_number = os.environ.get('TRAVIS_PULL_REQUEST', 'false')
