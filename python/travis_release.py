@@ -7,6 +7,8 @@ import sys
 import traceback
 import time
 
+MAX_PR_WALKING=int(os.environ.get('MAX_PR_WALKING', '5'))
+
 print('Running {}'.format(' '.join(sys.argv)))
 
 github = Github(os.environ['GITHUB_OAUTH_USER'], os.environ['GITHUB_OAUTH_TOKEN'])
@@ -32,7 +34,9 @@ if pr_number and pr_number != 'false':
 def find_pr():
     all_pulls = [pr for pr in repo.get_pulls(state='closed', sort='updated')]
     all_pulls.reverse()
-    for merged_pr in all_pulls:
+    for index, merged_pr in enumerate(all_pulls):
+        if index >= MAX_PR_WALKING:
+            break
         if merged_pr.merge_commit_sha == commit_id:
             return merged_pr
     return None
