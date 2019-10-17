@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import _strptime
 from github import Github
 from github.GithubException import UnknownObjectException
 import os
