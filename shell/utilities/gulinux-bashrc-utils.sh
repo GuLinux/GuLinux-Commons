@@ -10,7 +10,8 @@ function vimbashrc-gulinux() {
     vim "${BASH_SOURCE}"
     rebashrc
 }
-
+export GULINUX_BASH_UTILS="$( cd "$( dirname "$BASH_SOURCE" )"; pwd )"
+export PATH="${GULINUX_BASH_UTILS}:$PATH"
 export EDITOR=vim
 export VISUAL=vim
 function mkcd() {

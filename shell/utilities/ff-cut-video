@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+from datetime import datetime
+import os
+import sys
+import subprocess
+import argparse
+
+parser = argparse.ArgumentParser(description='Cut videos using ffmpeg')
+parser.add_argument('input', help='Input filename')
+parser.add_argument('-o', '--output', help='Output filename', required=False)
+parser.add_argument('-s', '--start', type=str, default='0', help='Start point for cutting. Should be formatted as HH:MM:SS. Special case: 0 (default) if cutting should begin from video start.')
+parser.add_argument('-e', '--end', type=str, help='End point for cutting. Should be formatted as HH:MM:SS.', required=True)
+parser.add_argument('-n', '--number', type=int, default=0, help='Index suffix for this video.')
+
+args = parser.parse_args()
+
+start = args.start
+if start == '0':
+    start = '00:00:00'
+
+
+
+filename, ext = os.path.splitext(args.input)
+
+def output_filename(number):
+    return '{}_CUT_{:03d}{}'.format(filename, number, ext)
+
+
+num = args.number
+print(args)
+if args.output:
+    output = args.output
+else:
+    output = output_filename(num)
+    if num == 0:
+        num = 1
+        output = output_filename(num)
+        while os.path.isfile(output):
+            num += 1
+            output = output_filename(num)
+
+
+time_format = '%H:%M:%S'
+
+duration_delta = datetime.strptime(args.end, time_format) - datetime.strptime(start, time_format)
+duration = (datetime.strptime('00:00:00', time_format) + duration_delta) .strftime(time_format)
+
+print(output)
+print(duration)
+
+subprocess.run(['ffmpeg', '-i', args.input, '-vcodec', 'copy', '-acodec', 'copy', '-ss', start, '-t', duration, output])
+# ffmpeg -i "$input" -vcodec copy -acodec copy -ss "$start" -t "$end" "$output"
