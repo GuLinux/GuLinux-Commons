@@ -47,6 +47,7 @@ if not pr:
         time.sleep(retry * 10)
         try:
             pr = find_pr()
+            break
         except:
             traceback.print_exc()
             retry += 1
