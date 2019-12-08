@@ -21,6 +21,7 @@ Options:
   -g|--glob       use glob as mask
   -crf <crf>
   -preset <preset>
+  -tune <tune>
 EOF
     exit ${1:-1}
 }
@@ -78,6 +79,9 @@ while [[ -n "$1" ]]; do
         -preset)
             PRESET_OPTS="-preset $2"; shift
             ;;
+        -tune)
+            TUNE_OPTS="-tune $2"; shift
+            ;;
         -g|--glob)
             GLOB_OPTS="-pattern_type glob"
             ;;
@@ -90,7 +94,7 @@ done
 
 [ -n "$VF" ] && VF_ARG="-vf \"$VF\""
 
-command="ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
+command="ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $TUNE_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
 echo "Running FFMPEG command:"
 echo "$command"
 eval "$command"
