@@ -10,6 +10,14 @@ function vimbashrc-gulinux() {
     vim "${BASH_SOURCE}"
     rebashrc
 }
+
+function update-gulinux-commons() {
+    cd "$( dirname "${BASH_SOURCE}" )"
+    cd "$( git rev-parse --show-toplevel )"
+    git pull
+    rebashrc
+}
+
 export GULINUX_BASH_UTILS="$( cd "$( dirname "$BASH_SOURCE" )"; pwd )"
 export PATH="${GULINUX_BASH_UTILS}:$PATH"
 export EDITOR=vim

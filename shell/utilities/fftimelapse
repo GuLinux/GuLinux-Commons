@@ -5,6 +5,7 @@ INPUT_FRAMERATE=1
 OUTPUT_FILENAME="timelapse.mp4"
 INPUT_MASK="IMG_%04d.JPG"
 START_NUMBER=1
+PRETEND=false
 
 
 print_help() {
@@ -22,6 +23,7 @@ Options:
   -crf <crf>
   -preset <preset>
   -tune <tune>
+  --pretend     just prints the command line and exit
 EOF
     exit ${1:-1}
 }
@@ -85,6 +87,9 @@ while [[ -n "$1" ]]; do
         -g|--glob)
             GLOB_OPTS="-pattern_type glob"
             ;;
+        --pretend)
+            PRETEND=true
+            ;;
         *)
             print_help
             ;;
@@ -97,6 +102,9 @@ done
 command="ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $TUNE_OPTS $CRF_OPTS '$OUTPUT_FILENAME'"
 echo "Running FFMPEG command:"
 echo "$command"
+if [ "$PRETEND" == "true" ]; then
+    exit 0
+fi
 eval "$command"
 
 
