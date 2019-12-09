@@ -12,9 +12,11 @@ function vimbashrc-gulinux() {
 }
 
 function update-gulinux-commons() {
-    cd "$( dirname "${BASH_SOURCE}" )"
-    cd "$( git rev-parse --show-toplevel )"
-    git pull
+    (
+        cd "$( dirname "${BASH_SOURCE}" )"
+        cd "$( git rev-parse --show-toplevel )"
+        git pull
+    )
     rebashrc
 }
 
