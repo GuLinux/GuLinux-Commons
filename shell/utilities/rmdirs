@@ -1,0 +1,24 @@
+#!/bin/bash
+
+do_rmdir() {
+    current="$1"
+    parent="$( dirname "$current")"
+    rootdir="$2"
+    rmdir --ignore-fail-on-non-empty "$current"
+    if [ -d "$current" ]; then
+        # echo "Failed removing $current (directory not empty?)"
+        true
+    else
+        echo "Directory $current removed"
+    fi
+    if [ "$current" != "$rootdir" ]; then
+        do_rmdir "$parent" "$rootdir"
+    fi
+}
+
+rootdir="$( cd "${1:-$PWD}"; pwd )"
+
+find "${rootdir}" -type d | while read dir; do
+    curdir="$( cd "${dir}"; pwd )"
+    do_rmdir "$curdir" "$rootdir"
+done
