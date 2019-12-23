@@ -30,6 +30,19 @@ function mkcd() {
 }
 
 function mkdatedir() {
+    if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+        cat <<EOF
+Usage: mkdatedir [-t|-u] [-s <suffix>] [cd]
+
+Options:
+  -t          : append time to directory name (default: date only)
+  -u          : use UTC timestamp instead of formatted date
+  -s <suffix> : append the specified suffix to the directory name
+  cd          : change directory after creating it
+EOF
+        return
+    fi
+    SUFFIX=""
     DATESPEC="%Y-%m-%d"
     if [ "$1" = '-t' ]; then
         DATESPEC="${DATESPEC}T%H-%M-%S"
@@ -38,7 +51,12 @@ function mkdatedir() {
         DATESPEC="%s"
         shift
     fi
-    dirname="$( ${DATE_COMMAND:-date} +${DATESPEC} )"
+    if [ "$1" = "-s" ]; then
+        SUFFIX="$2"
+        shift
+        shift
+    fi
+    dirname="$( ${DATE_COMMAND:-date} +${DATESPEC} )$SUFFIX"
     mkdir -p "$dirname"
     if [ "$1" = "cd" ]; then
         cd "$dirname"
