@@ -142,3 +142,13 @@ function dotenv-source() {
         fi
     done
 }
+
+
+function install_bashrc() {
+    BASHRC_FILE="${1:-$HOME/.bashrc}"
+    SELF_FILE="$( cd "$( dirname "$BASH_SOURCE")"; pwd)/$(basename "$BASH_SOURCE")"
+    cat >>"$BASHRC_FILE" <<EOF
+export BASHRC_FILE="$BASHRC_FILE"
+[ -r "$SELF_FILE" ] && source "$SELF_FILE"
+EOF
+}
