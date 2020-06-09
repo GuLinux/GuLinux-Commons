@@ -19,6 +19,12 @@ release_tag = 'v' + release_name
 release_body = os.environ['TRAVIS_COMMIT_MESSAGE']
 commit_id = os.environ['TRAVIS_COMMIT']
 
+draft_release = os.environ.get('GITHUB_DRAFT_RELEASE', '0')
+pre_release = os.environ.get('GITHUB_PRERELEASE', '1')
+
+is_draft_release = draft_release == '1' || draft_release.lower() == 'true'
+is_prerelease = pre_release == '1' || pre_release.lower() == 'true'
+
 print('release_tag={}, commit_id={}'.format(release_tag, commit_id))
 
 pr = None
@@ -66,7 +72,7 @@ release = None
 try:
     release = repo.get_release(release_tag)
 except UnknownObjectException:
-    release = repo.create_git_release(release_tag, release_name, release_body, draft=False, prerelease=True, target_commitish=commit_id)
+    release = repo.create_git_release(release_tag, release_name, release_body, draft=is_draft_release, prerelease=is_prerelease, target_commitish=commit_id)
 
 print('Release created/updated: ' + release_tag)
 for asset in sys.argv[1:]:
