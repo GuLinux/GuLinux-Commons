@@ -64,9 +64,22 @@ EOF
 }
 
 if [ "$SKIP_BASH_PROMPT" != "true" ]; then
+    has_git_dir() {
+        CURDIR="$PWD"
+        while [ "$CURDIR" != "/" ]; do
+            [ -d "$CURDIR/.git" ] && return 0
+            CURDIR="$( cd "$CURDIR/.."; pwd )"
+        done
+        return 1
+    }
+
     # Custom bash prompt
     # get current branch in git repo
     function parse_git_branch() {
+        #has_git_dir && return 0
+        if ! has_git_dir; then
+            return 0
+        fi
         BRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'`
         if [ ! "${BRANCH}" = "" ]
         then
