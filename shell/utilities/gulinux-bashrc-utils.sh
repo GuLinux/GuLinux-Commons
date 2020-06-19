@@ -66,7 +66,7 @@ EOF
 if [ "$SKIP_BASH_PROMPT" != "true" ]; then
     has_git_dir() {
         CURDIR="$PWD"
-        while [ "$CURDIR" != "/" ]; do
+        while [ -d "$CURDIR" ]  && [ "$CURDIR" != "/" ]; do
             [ -d "$CURDIR/.git" ] && return 0
             CURDIR="$( cd "$CURDIR/.."; pwd )"
         done
