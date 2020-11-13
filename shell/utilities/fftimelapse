@@ -104,7 +104,7 @@ done
 
 [ -n "$VF" ] && VF_ARG="-vf \"$VF\""
 
-command="ffmpeg -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $TUNE_OPTS $CODEC_OPT $CRF_OPTS '$OUTPUT_FILENAME'"
+command="ffmpeg -hide_banner -f image2 -start_number '$START_NUMBER' -r '$INPUT_FRAMERATE' $GLOB_OPTS -i '$INPUT_MASK' $OUTPUT_FRAMERATE_OPTS $VF_ARG $PRESET_OPTS $TUNE_OPTS $CODEC_OPT $CRF_OPTS '$OUTPUT_FILENAME'"
 echo "Running FFMPEG command:"
 echo "$command"
 if [ "$PRETEND" == "true" ]; then
