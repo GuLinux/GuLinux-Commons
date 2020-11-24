@@ -11,6 +11,7 @@ parser.add_argument('-o', '--output', help='Output filename', required=False)
 parser.add_argument('-s', '--start', type=str, default='0', help='Start point for cutting. Should be formatted as HH:MM:SS. Special case: 0 (default) if cutting should begin from video start.')
 parser.add_argument('-e', '--end', type=str, help='End point for cutting. Should be formatted as HH:MM:SS.', required=True)
 parser.add_argument('-n', '--number', type=int, default=0, help='Index suffix for this video.')
+parser.add_argument('-p', '--pretend', action='store_true', help='Just print ffmpeg options instead of actually running')
 
 args = parser.parse_args()
 
@@ -45,8 +46,10 @@ time_format = '%H:%M:%S'
 duration_delta = datetime.strptime(args.end, time_format) - datetime.strptime(start, time_format)
 duration = (datetime.strptime('00:00:00', time_format) + duration_delta) .strftime(time_format)
 
-print(output)
-print(duration)
+process_args = ['ffmpeg', '-hide_banner', '-i', args.input, '-vcodec', 'copy', '-acodec', 'copy', '-ss', start, '-t', duration, output]
 
-subprocess.run(['ffmpeg', '-i', args.input, '-vcodec', 'copy', '-acodec', 'copy', '-ss', start, '-t', duration, output])
+if args.pretend:
+    print(' '.join(process_args))
+else:
+    subprocess.run(process_args)
 # ffmpeg -i "$input" -vcodec copy -acodec copy -ss "$start" -t "$end" "$output"
