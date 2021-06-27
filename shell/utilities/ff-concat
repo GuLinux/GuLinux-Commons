@@ -1,0 +1,30 @@
+#!/bin/bash
+tmpfile="/tmp/$( basename "$0").tmp"
+
+rm -f "$tmpfile"
+
+get_full_path() {
+    echo -n "$( cd "$( dirname "$1")"; pwd)"
+    echo -n "/"
+    echo "$( basename "$1")"
+}
+
+error_help() {
+    [ -n "$1" ] && echo -e "Error: $1\n" >&2
+    echo "Usage: $0 <files to concat> ... -- output-file" >&2
+    exit 1
+}
+
+[ -z "$1" ] && error_help "you need to pass one or more files to concatenate"
+
+while [ -n "$1" ] && [ "$1" != "--" ]; do
+    echo "file '$( get_full_path "$1")'" >> "$tmpfile"
+    shift
+done
+shift
+
+[ -z "$1" ] && error_help "you need to pass an output file"
+output_file="$1"
+
+echo "Output file: $output_file"
+ffmpeg -f concat -safe 0 -i "$tmpfile" -c copy "$output_file"
