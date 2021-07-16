@@ -12,6 +12,11 @@ parser.add_argument('-s', '--start', type=str, default='0', help='Start point fo
 parser.add_argument('-e', '--end', type=str, help='End point for cutting. Should be formatted as HH:MM:SS.', required=True)
 parser.add_argument('-n', '--number', type=int, default=0, help='Index suffix for this video.')
 parser.add_argument('-p', '--pretend', action='store_true', help='Just print ffmpeg options instead of actually running')
+parser.add_argument('-v', '--video-codec', default='copy', help='Video codec (default: copy)')
+parser.add_argument('--crf', help='Video CRF')
+parser.add_argument('--preset', help='Video preset')
+parser.add_argument('-a', '--audio-codec', default='copy', help='Audio codec (default: copy)')
+
 
 args = parser.parse_args()
 
@@ -46,7 +51,13 @@ time_format = '%H:%M:%S'
 duration_delta = datetime.strptime(args.end, time_format) - datetime.strptime(start, time_format)
 duration = (datetime.strptime('00:00:00', time_format) + duration_delta) .strftime(time_format)
 
-process_args = ['ffmpeg', '-hide_banner', '-i', args.input, '-vcodec', 'copy', '-acodec', 'copy', '-ss', start, '-t', duration, output]
+video_preset = ['-preset', args.preset] if args.preset else []
+video_crf = ['-crf', args.crf] if args.crf else []
+
+process_args = ['ffmpeg', '-hide_banner', '-i', args.input, '-vcodec', args.video_codec, video_preset, video_crf, '-acodec', args.audio_codec, '-ss', start, '-t', duration, output]
+process_args = [i if type(i) is list else [i] for i in process_args]
+process_args = [item for sublist in process_args for item in sublist]
+print(process_args)
 
 if args.pretend:
     print(' '.join(process_args))
