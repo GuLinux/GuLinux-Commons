@@ -17,7 +17,7 @@ if test "x$2" != "x"; then
         echo "Error! Interpreter \"$2\" not found"
         usage
     else
-        INTERPRETER="$2"
+        INTERPRETER="$@"
     fi
 fi
 
