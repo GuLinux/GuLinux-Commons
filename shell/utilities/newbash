@@ -4,34 +4,35 @@ function usage() {
     exit 0
 }
 
+SCRIPT_FILE="$1"; shift
 
-if test "x$1" == "x"; then
+if test "x$SCRIPT_FILE" == "x"; then
     usage
 fi
 
 #INTERPRETER="$( which bash 2>/dev/null)"
 INTERPRETER="/bin/bash"
 
-if test "x$2" != "x"; then
-    if ! [ -r $2 ]; then
-        echo "Error! Interpreter \"$2\" not found"
+if test "x$1" != "x"; then
+    if ! [ -r $1 ]; then
+        echo "Error! Interpreter \"$1\" not found"
         usage
     else
         INTERPRETER="$@"
     fi
 fi
 
-if [ -r $1 ]; then
-    echo "File $1 already present, opening"
-    vim $1
+if [ -r $SCRIPT_FILE ]; then
+    echo "File $SCRIPT_FILE already present, opening"
+    vim $SCRIPT_FILE
     exit 0
 fi
 
-cat >$1 <<EOF
+cat >$SCRIPT_FILE <<EOF
 #!$INTERPRETER
 
 EOF
 
-chmod +x $1
-vim $1 +2
+chmod +x $SCRIPT_FILE
+vim $SCRIPT_FILE +2
 
