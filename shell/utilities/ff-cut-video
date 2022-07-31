@@ -14,6 +14,7 @@ parser.add_argument('-n', '--number', type=int, default=0, help='Index suffix fo
 parser.add_argument('-p', '--pretend', action='store_true', help='Just print ffmpeg options instead of actually running')
 parser.add_argument('-v', '--video-codec', default='copy', help='Video codec (default: copy)')
 parser.add_argument('--crf', help='Video CRF')
+parser.add_argument('--no-audio', help='Remove audio', action='store_true')
 parser.add_argument('--preset', help='Video preset')
 parser.add_argument('-a', '--audio-codec', default='copy', help='Audio codec (default: copy)')
 
@@ -54,7 +55,7 @@ duration = (datetime.strptime('00:00:00', time_format) + duration_delta) .strfti
 video_preset = ['-preset', args.preset] if args.preset else []
 video_crf = ['-crf', args.crf] if args.crf else []
 
-process_args = ['ffmpeg', '-hide_banner', '-i', args.input, '-vcodec', args.video_codec, video_preset, video_crf, '-acodec', args.audio_codec, '-ss', start, '-t', duration, output]
+process_args = ['ffmpeg', '-hide_banner', '-i', args.input, '-vcodec', args.video_codec, video_preset, video_crf, '-an' if args.no_audio else ['-acodec', args.audio_codec], '-ss', start, '-t', duration, output]
 process_args = [i if type(i) is list else [i] for i in process_args]
 process_args = [item for sublist in process_args for item in sublist]
 print(process_args)
