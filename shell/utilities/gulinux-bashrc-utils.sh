@@ -165,3 +165,6 @@ export BASHRC_FILE="$BASHRC_FILE"
 [ -r "$SELF_FILE" ] && source "$SELF_FILE"
 EOF
 }
+
+alias cdgit="cd \$(git rev-parse  --show-toplevel)"
+
