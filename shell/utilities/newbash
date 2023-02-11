@@ -11,15 +11,10 @@ if test "x$SCRIPT_FILE" == "x"; then
 fi
 
 #INTERPRETER="$( which bash 2>/dev/null)"
-INTERPRETER="/bin/bash"
+INTERPRETER="/usr/bin/env bash"
 
-if test "x$1" != "x"; then
-    if ! [ -r $1 ]; then
-        echo "Error! Interpreter \"$1\" not found"
-        usage
-    else
-        INTERPRETER="$@"
-    fi
+if [ -z "$INTERPRETER" ]; then
+    INTERPRETER="$@"
 fi
 
 if [ -r $SCRIPT_FILE ]; then
