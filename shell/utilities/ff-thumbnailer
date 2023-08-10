@@ -17,7 +17,7 @@ format_mod="$(( $format_w * $format_h ))"
 
 total_frames="$(ffprobe "$input_file" -select_streams v -show_entries stream=nb_frames -of default=nk=1:nw=1 -v quiet)"
 if [ "$total_frames" = "N/A" ]; then
-    total_frames="$( ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0"$input_file" )"
+    total_frames="$( ffprobe "$input_file" -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 )"
 fi
 ffmpeg -ss 2 -i "$input_file" -frames 5 -vf "select=not(mod(n\,$(($total_frames/$format_mod)) )),scale=320:240,tile=$format" -vsync vfr -q:v 10 "$output_file"
 
