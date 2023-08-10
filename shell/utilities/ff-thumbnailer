@@ -1,0 +1,20 @@
+#!/bin/bash
+
+input_file="$1"
+output_file="$2"
+format="${3:-4x3}"
+
+usage() {
+    echo "Usage: $0 <input_file> <output_file> [wxh]" >&2
+    exit 1
+}
+
+[ -r "$input_file" ] && [ -n "$output_file" ] || usage
+
+format_w="$(cut -dx -f1 <<<$format)"
+format_h="$(cut -dx -f2 <<<$format)"
+format_mod="$(( $format_w * $format_h ))"
+
+total_frames="$(ffprobe "$input_file" -select_streams v -show_entries stream=nb_frames -of default=nk=1:nw=1 -v quiet)"
+ffmpeg -ss 2 -i "$input_file" -frames 5 -vf "select=not(mod(n\,$(($total_frames/$format_mod)) )),scale=320:240,tile=$format" -vsync vfr -q:v 10 "$output_file"
+
