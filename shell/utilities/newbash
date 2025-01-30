@@ -10,11 +10,10 @@ if test "x$SCRIPT_FILE" == "x"; then
     usage
 fi
 
-#INTERPRETER="$( which bash 2>/dev/null)"
-INTERPRETER="/usr/bin/env bash"
 
+INTERPRETER="$@"
 if [ -z "$INTERPRETER" ]; then
-    INTERPRETER="$@"
+    INTERPRETER="/usr/bin/env bash"
 fi
 
 if [ -r $SCRIPT_FILE ]; then
