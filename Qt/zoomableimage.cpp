@@ -17,6 +17,7 @@
  *
  */
 
+#include <functional>
 #include "zoomableimage.h"
 #include <QLabel>
 #include <QImage>
