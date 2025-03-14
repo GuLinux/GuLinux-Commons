@@ -1,2 +1,6 @@
 #!/usr/bin/env bash
-nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY "$@"
+if [ -n "$1" ]; then
+    nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY "$@"
+else
+    nmcli -f NAME,UUID,AUTOCONNECT,AUTOCONNECT-PRIORITY connection show
+fi
