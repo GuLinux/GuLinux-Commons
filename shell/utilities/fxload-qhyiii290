@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+FXLOAD="fxload"
+if ! which "$FXLOAD" &>/dev/null; then
+    FXLOAD=fxload-libusb
+fi
+if ! which "$FXLOAD" &>/dev/null; then
+    echo "fxload or fxload-libusb are required, exiting"
+    exit 1
+fi
+
+sudo $FXLOAD -t fx3 -I /lib/firmware/qhy/QHY5III290.img -d 0x1618:0x0290
