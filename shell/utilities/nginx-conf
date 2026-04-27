@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+cmd="$1"
+file="$2"
+
+log() {
+    echo -e "$@" >&2
+}
+
+help_msg() {
+    log "Usage: $0 <enable|disable> <conf-file>"
+    exit 1
+}
+
+
+if ! [ -r "$file" ]; then
+    help_msg
+fi
+
+file="$(readlink -f "$file")"
+filename="$(basename "$file")"
+file_path="$(dirname "$file")"
+
+nginx_confdir="/etc/nginx"
+sites_available="$nginx_confdir/sites-available"
+sites_enabled="$nginx_confdir/sites-enabled"
+
+if [ "$file_path" != "$sites_available" ]; then
+    log "[ERR] The config file needs to be in $sites_available"
+    help_msg
+fi
+
+if [ "${file##*.}" != 'conf' ]; then
+    log "[ERR] You need to use a .conf config file"
+    help_msg
+fi
+
+case "$cmd" in
+        enable)
+            sudo ln -vsf "$file" "$sites_enabled/$filename"
+        ;;
+        disable)
+            sudo rm -vf "$sites_enabled/$filename"
+        ;;
+    *)
+        help_msg
+        ;;
+esac
+
