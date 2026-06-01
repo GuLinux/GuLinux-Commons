@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+CHECK_HOST="linux.org"
+NETWORK_IFACE="wlan0"
+PRIMARY_NETWORK=""
+SECONDARY_NETWORK=""
+REBOOT_ON_FAILURE=false
+SUDO_REBOOT=false
+
+help_msg() {
+    cat >&2 <<EOF
+$1
+Usage: $0 <options>
+Options:
+
+ -c|--check-host <hostname>       Hostname to check for internet connection
+ -i|--interface <if>              Network interface to use
+ -p|--primary-network <network>   Primary network to connect to
+ -s|--secondary-network <network> Secondary network to connect to
+ -r|--reboot                      Reboot when both primary and secondary networks fail
+ -s|--sudo-reboot                 Use sudo when rebooting
+
+EOF
+
+    exit "${2:-1}" 
+}
+
+while [ -n "$1" ]; do
+    case "$1" in
+        -c|--check-host)
+            CHECK_HOST="$2"; shift
+            ;;
+        -i|--interface)
+            NETWORK_IFACE="$2"; shift
+            ;;
+        -p|--primary-network)
+            PRIMARY_NETWORK="$2"; shift
+            ;;
+        -s|--secondary-network)
+            SECONDARY_NETWORK="$2"; shift
+            ;;
+        -r|--reboot)
+            REBOOT_ON_FAILURE=true
+            ;;
+        --sudo-reboot)
+            SUDO_REBOOT=true
+            ;;
+        *)
+            help_msg
+            ;;
+    esac
+    shift
+done
+
+if [ -z "$PRIMARY_NETWORK" ]; then
+    help_msg "[ERROR] You need to specify at least the primary network."
+fi
+
+log() {
+	echo "$(date +%Y-%m-%dT%H:%M:%S): $@"
+}
+
+is_connected() {
+  ping -c 1 -q "$CHECK_HOST" &>/dev/null
+}
+
+check_connected() {
+	if is_connected; then
+		[ -n "$*" ] && log "$@"
+		exit 0
+	fi
+}
+
+connect_to() {
+	network="$1"
+	log "Disconnecting $NETWORK_IFACE"
+	nmcli device down "$NETWORK_IFACE"
+	sleep 2
+	log "Connecting to $network"
+	nmcli connection up "$network"
+}
+
+check_connected
+connect_to "$PRIMARY_NETWORK"
+check_connected
+connect_to "$SECONDARY_NETWORK"
+if ! is_connected; then
+	log "Error connecting to both $PRIMARY_NETWORK and $SECONDARY_NETWORK, exiting"
+    if [ "$REBOOT_ON_FAILURE" = true ] then
+        if [ "$SUDO_REBOOT" = true ]; then
+            sudo reboot
+        else
+            reboot
+        fi
+    fi
+	exit 1
+fi
+
