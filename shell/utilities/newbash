@@ -5,6 +5,16 @@ function usage() {
 }
 
 SCRIPT_FILE="$1"; shift
+SCRIPT_FILE_EXT="${SCRIPT_FILE##*.}"
+
+case "$SCRIPT_FILE_EXT" in
+    py)
+        DEFAULT_INTERPRETER="python3"
+        ;;
+    *)
+        DEFAULT_INTERPRETER="bash"
+        ;;
+esac
 
 if test "x$SCRIPT_FILE" == "x"; then
     usage
@@ -13,7 +23,7 @@ fi
 
 INTERPRETER="$@"
 if [ -z "$INTERPRETER" ]; then
-    INTERPRETER="/usr/bin/env bash"
+    INTERPRETER="/usr/bin/env $DEFAULT_INTERPRETER"
 fi
 
 if [ -r $SCRIPT_FILE ]; then
