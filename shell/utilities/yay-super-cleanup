@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+sudo rm -rf /var/cache/pacman/pkg/download-*
+yes | yay -Scc
+
